@@ -1,13 +1,14 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { resolve } from "path";
-import { copyFileSync, renameSync } from "fs";
+import { copyFileSync, renameSync } from "node:fs";
 
 export default defineConfig({
   plugins: [
     react(),
     {
       name: "post-build",
+      enforce: "post" as const,
       closeBundle() {
         const dist = resolve(__dirname, "dist");
         copyFileSync(
@@ -25,7 +26,8 @@ export default defineConfig({
     rollupOptions: {
       input: {
         popup: resolve(__dirname, "src/popup/index.html"),
-        content: resolve(__dirname, "src/content/index.ts")
+        content: resolve(__dirname, "src/content/index.ts"),
+        background: resolve(__dirname, "src/background/index.ts")
       },
       output: {
         entryFileNames: "[name].js"
