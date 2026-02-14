@@ -10,7 +10,9 @@ export default defineConfig({
       name: "post-build",
       closeBundle() {
         const dist = resolve(__dirname, "dist");
-        copyFileSync("manifest.json", `${dist}/manifest.json`);
+        copyFileSync(
+            resolve(__dirname, "manifest.json"),
+            `${dist}/manifest.json`);
         renameSync(`${dist}/index.html`, `${dist}/popup.html`);
       },
     },
@@ -21,7 +23,13 @@ export default defineConfig({
     outDir: resolve(__dirname, "dist"),
     emptyOutDir: true,
     rollupOptions: {
-      output: { entryFileNames: "popup.js" },
+      input: {
+        popup: resolve(__dirname, "src/popup/index.html"),
+        content: resolve(__dirname, "src/content/index.ts")
+      },
+      output: {
+        entryFileNames: "[name].js"
+      },
     },
   },
 });
