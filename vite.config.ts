@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import { resolve } from "path";
 import { copyFileSync, renameSync } from "node:fs";
@@ -27,11 +27,15 @@ export default defineConfig({
       input: {
         popup: resolve(__dirname, "src/popup/index.html"),
         content: resolve(__dirname, "src/content/index.ts"),
-        background: resolve(__dirname, "src/background/index.ts")
+        background: resolve(__dirname, "src/background/index.ts"),
       },
       output: {
         entryFileNames: "[name].js"
       },
     },
+  },
+  test: {
+    root: "./",
+    environment: "jsdom",
   },
 });
