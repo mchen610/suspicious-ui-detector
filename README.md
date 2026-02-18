@@ -10,3 +10,17 @@ Pushing a version tag triggers a GitHub Actions workflow that builds the extensi
 git tag v0.0.1
 git push origin v0.0.1
 ```
+
+## Testing
+
+Running all unit and integration tests with JSDOM:
+
+```bash
+npm run test
+```
+
+Running unit or integration tests for a specific test module (`background/`, `content/`, `popup/` and `integration/`):
+
+```bash
+npm run test -- tests/<module>
+```
