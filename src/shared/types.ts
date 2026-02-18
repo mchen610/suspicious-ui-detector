@@ -12,7 +12,7 @@
 export interface EvidencePacket {
     id: number;                     // incremental ID unique to a given extraction pass
     tagName: string;                // Ex. "a", "button", "iframe"
-    HTMLSnippet: string;            // truncated outerHTML bounded by config limits
+    HTMLSnippet: string;            // truncated outerHTML bounded by 'config.maxSnippetLength'
     attributes: Record<string, string>; // Ex. { "href": "www.ufl.edu",  "src": *, "alt": *, "title": *,
                                         // "aria-label": *, "download": *, "target": * }
     style: StyleData;

@@ -1,7 +1,6 @@
 /**
- * This file acts as a factory function returning a plain Object
- * that holds every tunable parameter referenced in the extraction
- * pipeline.
+ * This file acts as a factory function returning a plain Object that
+ * holds every tunable parameter referenced in the extraction pipeline.
  */
 
 export interface ExtractionConfig {
@@ -15,18 +14,19 @@ export interface ExtractionConfig {
     minElemWidth: number;           // min width to be considered (in pixels)
     minElemHeight: number;          // min height to be considered (in pixels)
     interactiveSelectors: string;   // CSS selector string used in 'selector.ts'
+    adContainerSelectors: string;
     ignoredTags: Set<string>;       // tags to strip during sanitization
 }
 
 export const DEFAULT_CONFIG: ExtractionConfig = {
-    maxElems: 30,
-    maxSnippetLength: 512,
+    maxElems: 50,
+    maxSnippetLength: 384,
     maxSurroundingTextLength: 200,
     maxSurroundingTextFragments: 5,
     maxStyleAncestorDepth: 30,      // fairly high since nestings >25 observed in practice
-                                    // NOTE: Consider unbounded up to <iframe> or <body> boundary
-    ancestorDepth: 3,               // relative low since text labels tend to live closer by
-    siblingRadius: 2,
+                                    //  NOTE: Consider unbounded up to <iframe> or <body> boundary
+    ancestorDepth: 5,               // relative moderate since text labels need not live close by
+    siblingRadius: 3,               //  on sites with deeply nested advertisements
     minElemWidth: 10,
     minElemHeight: 10,
     interactiveSelectors: [
@@ -37,6 +37,16 @@ export const DEFAULT_CONFIG: ExtractionConfig = {
         "input[type='button']",
         "[role='button']",          // 'role' overrides implicit, default role
         "[onclick]",
+    ].join(", "),
+    adContainerSelectors: [
+        "[class*='ezoic' i]",
+        "[id^='ezwrp']",
+        "ins.adsbygoogle",
+        "div[id^='google_ads']",
+        "div[id^='div-gtp-ad']",
+        "[data-ad]",
+        "[data-ad-slot]",
+        "[data-adunit]",
     ].join(", "),
     ignoredTags: new Set([
         "script",
