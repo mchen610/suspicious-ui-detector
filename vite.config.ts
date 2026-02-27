@@ -1,11 +1,13 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 import { resolve } from "path";
 import { copyFileSync, renameSync } from "node:fs";
 
 export default defineConfig({
   plugins: [
     react(),
+    tailwindcss(),
     {
       name: "post-build",
       enforce: "post" as const,
