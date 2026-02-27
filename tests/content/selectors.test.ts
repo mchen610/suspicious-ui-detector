@@ -2,17 +2,17 @@ import { beforeEach, describe, it, expect } from "vitest";
 import { discoverCandidates } from "../../src/content/selectors";
 import { ExtractionConfig, DEFAULT_CONFIG} from "../../src/content/config";
 
-/**
- * Helper function that creates a container div, sets its innerHTML,
- * appends it to 'document.body' (so elements have computed styles and
- * bounding rects) and returns the corresponding container.
- */
 const TEST_CONFIG: ExtractionConfig = {
     ...DEFAULT_CONFIG,
     minElemWidth: 0,    // o.w. we'd fail all test cases since jsdom does not compute geometry,
     minElemHeight: 0,   // every call to 'getBoundingClientRect()' returns {top: 0, left: 0, ...}
 };
 
+/**
+ * Helper function that creates a container div, sets its innerHTML,
+ * appends it to 'document.body' (so elements have computed styles and
+ * bounding rects) and returns the corresponding container.
+ */
 function createDOM(html: string): HTMLElement {
     const container = document.createElement("div");
     container.innerHTML = html;
