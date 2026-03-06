@@ -5,7 +5,7 @@
 A Chrome extension that detects suspicious UI elements on web pages. 
 
 
----
+
 ## Architecture
 
 - **Chrome Extension** (Manifest V3) built with React, Tailwind, Vite, TypeScript
@@ -81,8 +81,6 @@ git push origin v0.0.1
 
 
 ---
-## Authors
-
 <p align="center">
   <b>Melvin Chen</b> 
   <a href="https://github.com/mchen610"><img src="https://img.shields.io/badge/GitHub-181717?style=flat&logo=github&logoColor=white" alt="GitHub" valign="middle"></a>
