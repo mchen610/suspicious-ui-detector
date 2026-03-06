@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test Fixture — Iframe Ad</title>
+    <style>
+        body { margin: 0; font-family: sans-serif; padding: 24px; }
+        .ad-iframe-wrapper {
+            margin: 20px 0; text-align: center; overflow: hidden;
+        }
+        .ad-iframe-wrapper iframe {
+            border: 1px solid #ccc; display: block; margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+<h1>Iframe Ad Test</h1>
+<p>Content before the ad iframe.</p>
+
+<div class="ad-iframe-wrapper" id="div-gpt-ad-12345">
+    <iframe src="about:blank" width="728" height="90"
+            title="Advertisement">
+    </iframe>
+</div>
+
+<p>Content after the ad iframe.</p>
+
+<!-- A legitimate iframe (e.g., embedded video) -->
+<iframe src="https://www.youtube.com/embed/LPZh9BOjkQs" width="560" height="315"
+        title="Embedded Video" allowfullscreen>
+</iframe>
+
+<button onclick="alert('legit')">Subscribe</button>
+</body>
+</html>

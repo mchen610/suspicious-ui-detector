@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test Fixture — Deeply Nested Ad</title>
+    <style>
+        body { margin: 0; font-family: sans-serif; padding: 24px; }
+        .nest { padding: 2px; }
+        .nest-overlay { position: relative; z-index: 100; }
+        .nest-absolute { position: absolute; z-index: 500; top: 50px; left: 50px; }
+        .ad-link {
+            display: inline-block; padding: 16px 32px;
+            background: #E91E63; color: white;
+            text-decoration: none; font-size: 16px; border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+<h1>Deeply Nested Ad Test</h1>
+
+<!-- 12 levels of nesting with varying position contexts -->
+<div class="nest" id="depth-1">
+    <div class="nest" id="depth-2">
+        <div class="nest nest-overlay" id="depth-3" style="opacity:0.95;">
+            <div class="nest" id="depth-4">
+                <div class="nest" id="depth-5">
+                    <div class="nest nest-absolute" id="depth-6">
+                        <div class="nest" id="depth-7">
+                            <div class="nest" id="depth-8" style="pointer-events:auto;">
+                                <div class="nest" id="depth-9">
+                                    <div class="nest" id="depth-10">
+                                        <div class="nest" id="depth-11" data-ad>
+                                            <div class="nest" id="depth-12">
+                                                <a class="ad-link" href="https://ad.example.com/deep"
+                                                   target="_blank">
+                                                    Sponsored Download
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
