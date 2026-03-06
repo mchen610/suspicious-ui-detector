@@ -3,3 +3,7 @@ dist
 .idea/
 .env*
 .DS_Store
+
+playwright-report/
+test-results/
+tests/integration/fixtures/*.js*

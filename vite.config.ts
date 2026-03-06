@@ -38,6 +38,8 @@ export default defineConfig({
   },
   test: {
     root: "./",
+    include: ["tests/**/*.test.ts"],
+    exclude: ["tests/integration/**"],
     environment: "jsdom",
   },
 });
