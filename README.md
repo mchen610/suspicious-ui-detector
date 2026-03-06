@@ -1,9 +1,6 @@
 # Suspicious UI Detector
 
-
-
-A Chrome extension that detects suspicious UI elements on web pages. 
-
+A Chrome extension that detects suspicious UI elements on web pages.
 
 
 ## Architecture
