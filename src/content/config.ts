@@ -13,9 +13,13 @@ export interface ExtractionConfig {
     siblingRadius: number;          // number of sibling elements to inspect on each side
     minElemWidth: number;           // min width to be considered (in pixels)
     minElemHeight: number;          // min height to be considered (in pixels)
-    interactiveSelectors: string;   // CSS selector string used in 'selector.ts'
-    adContainerSelectors: string;
+    interactiveSelectors: string;   // CSS selector string used in 'selector.ts' (non-ad elements)
+    adContainerSelectors: string;   // selector string (ad container elements)
     ignoredTags: Set<string>;       // tags to strip during sanitization
+    attrNames: string[];            // attribute names to include
+    adPatterns: RegExp[];           // patterns that justify including class/id in attributes
+    contextTextTags: Set<string>;   // tags for which text collection is considered in parent walk
+    maxContextTextLength: number;   // max char length for text collected from contextTextTags
 }
 
 export const DEFAULT_CONFIG: ExtractionConfig = {
@@ -56,6 +60,16 @@ export const DEFAULT_CONFIG: ExtractionConfig = {
         "link",
         "meta",
     ]),
+    attrNames: [
+        "href", "src", "alt", "title", "aria-label", "download", "target",
+        "data-ad-slot", "data-ad-client",
+    ],
+    adPatterns: [/ad/i, /ezoic/i, /sponsor/i, /promo/i, /gpt/i],
+    contextTextTags: new Set([
+        "span", "label", "small", "em", "strong", "b", "i",
+        "mark", "abbr", "cite", "code", "sub", "sup", "p",
+    ]),
+    maxContextTextLength: 40,
 }
 
 /**

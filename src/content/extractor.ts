@@ -13,9 +13,6 @@ import { EvidencePacket,
          AncestorStyleEntry
 } from "../shared/types";
 
-
-const ATTR_NAMES = ["href", "src", "alt", "title", "aria-label", "download", "target"];
-
 export function extractEvidence(
     candidates: HTMLElement[],
     config: ExtractionConfig = DEFAULT_CONFIG,
@@ -27,7 +24,7 @@ export function extractEvidence(
     return {
         url: window.location.href,
         timestamp: new Date().toISOString(),
-        candidateCount: candidates.length,      // NOTE: = length after capping -> consider changing
+        candidateCount: candidates.length,
         packets: packets,
     };
 }
@@ -41,7 +38,7 @@ function buildPacket(
         id: index,
         tagName: elem.tagName.toLowerCase(),
         HTMLSnippet: extractSnippet(elem, config),
-        attributes: extractAttributes(elem),
+        attributes: extractAttributes(elem, config),
         style: extractStyle(elem),
         position: extractPosition(elem),
         styleAncestry: extractStyleAncestry(elem, config),
@@ -65,14 +62,26 @@ function extractSnippet(elem: HTMLElement, config: ExtractionConfig): string {
         snippet : snippet.slice(0, config.maxSnippetLength);
 }
 
-function extractAttributes(elem: HTMLElement): Record<string, string> {
+function extractAttributes(elem: HTMLElement, config: ExtractionConfig): Record<string, string> {
     const attrs: Record<string, string> = {};
 
-    for (const name of ATTR_NAMES) {
+    for (const name of config.attrNames) {
         const value = elem.getAttribute(name);
         if (value !== null) {
             attrs[name] = value;
         }
+    }
+
+    // add class attribute iff matches on some ad pattern
+    const classVal = elem.getAttribute("class");
+    if (classVal && config.adPatterns.some((expr) => expr.test(classVal))) {
+        attrs["class"] = classVal;
+    }
+
+    // add id attribute iff matches on some ad pattern
+    const id = elem.getAttribute("id");
+    if (id && config.adPatterns.some((expr) => expr.test(id))) {
+        attrs["id"] = id;
     }
 
     return attrs;
@@ -145,25 +154,24 @@ function extractSurroundingText(
 ): string[] {
     const texts: string[] = [];
 
+    // collect candidate's sibling text
     collectSiblingText(elem, "previousElementSibling", config.siblingRadius, texts);
     collectSiblingText(elem, "nextElementSibling", config.siblingRadius, texts);
 
+    // parent walk
     let curr = elem.parentElement;
     let depth = 0;
-    while (curr && depth < config.maxStyleAncestorDepth) {
-        const text = ((curr: HTMLElement): string => {
-            let txt = "";
+    while (curr && depth < config.ancestorDepth) {
+        const tag = curr.tagName.toLowerCase();
+        if (tag === "body" || tag === "html") break;
 
-            for (const node of curr.childNodes) {
-                if (node.nodeType === Node.TEXT_NODE) {
-                    txt += (node.textContent || "").trim() + " ";
-                }
-            }
-
-            return txt.trim();
-        })(curr);
-
+        // collect parent's children text
+        const text = collectChildText(curr, config);
         if (text) texts.push(text);
+
+        collectSiblingText(curr, "nextElementSibling", config.siblingRadius, texts);
+        collectSiblingText(curr, "nextElementSibling", config.siblingRadius, texts);
+
         curr = curr.parentElement;
         depth++;
     }
@@ -174,7 +182,7 @@ function extractSurroundingText(
         .slice(0, config.maxSurroundingTextFragments);
 }
 
-/** Helper function */
+/** Helper function that collects textContent from adjacent sibling elements */
 function collectSiblingText(
     elem: HTMLElement,
     direction: "previousElementSibling" | "nextElementSibling",
@@ -190,4 +198,34 @@ function collectSiblingText(
         sibling = sibling[direction];
         count++;
     }
+}
+
+/**
+ * Helper function that collects text from child nodes which are either
+ * text nodes or inline elements.
+ */
+function collectChildText(parent: HTMLElement, config: ExtractionConfig) {
+    let txt = "";
+
+    for (const node of parent.childNodes) {
+
+        // if text node (ex. "Download") append directly
+        if (node.nodeType === Node.TEXT_NODE) {
+            txt += (node.textContent || "").trim() + " ";
+
+        // o.w. if element node conditionally append textContent (ex. <span>Ad</span>)
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+            const el = node as HTMLElement;
+            const tag = el.tagName.toLowerCase();
+            const content = (el.textContent || "").trim();
+
+            if (config.contextTextTags.has(tag) && content.length > 0 &&
+                content.length <= config.maxContextTextLength
+            ) {
+                txt += content + " ";
+            }
+        }
+    }
+
+    return txt.trim();
 }
