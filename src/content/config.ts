@@ -43,7 +43,7 @@ export const DEFAULT_CONFIG: ExtractionConfig = {
         "[id^='ezwrp']",
         "ins.adsbygoogle",
         "div[id^='google_ads']",
-        "div[id^='div-gtp-ad']",
+        "div[id^='div-gpt-ad']",
         "[data-ad]",
         "[data-ad-slot]",
         "[data-adunit]",

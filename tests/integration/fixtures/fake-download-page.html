@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test Fixture — Fake Download Page</title>
+    <style>
+        body { margin: 0; font-family: sans-serif; }
+
+        .page-header {
+            background: #2d2d2d; color: white;
+            padding: 16px; font-size: 18px;
+        }
+
+        .content { padding: 24px; max-width: 800px; margin: 0 auto; }
+
+        /* Real download button */
+        .real-download {
+            display: inline-block; padding: 12px 24px;
+            background: #4CAF50; color: white;
+            text-decoration: none; border-radius: 4px;
+            font-size: 16px; cursor: pointer;
+        }
+
+        /* Disguised ad — styled to mimic the real download */
+        .ad-container {
+            margin: 20px 0; padding: 16px;
+            border: 1px solid #ddd; border-radius: 8px;
+            position: relative;
+        }
+        .ad-container .ad-label {
+            font-size: 10px; color: #999;
+            position: absolute; top: 4px; right: 8px;
+        }
+        .ad-container .fake-download-btn {
+            display: inline-block; padding: 14px 32px;
+            background: #43A047; color: white;
+            text-decoration: none; border-radius: 4px;
+            font-size: 18px; font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* Ezoic-style ad wrapper */
+        .ezoic-ad {
+            margin: 20px 0; min-height: 90px;
+            background: #fafafa; text-align: center;
+        }
+    </style>
+</head>
+<body>
+<div class="page-header">APKMirror — SuperApp v3.2.1</div>
+
+<div class="content">
+    <h1>Download SuperApp v3.2.1</h1>
+    <p>Your file is ready for download.</p>
+
+    <!-- Disguised ad block -->
+    <div class="ad-container" data-ad-slot="banner-top-1">
+        <span class="ad-label">Advertisement</span>
+        <a class="fake-download-btn" href="https://ad-network.example.com/click?id=123"
+           target="_blank">
+            Download Now
+        </a>
+    </div>
+
+    <!-- Real download -->
+    <a class="real-download" href="/files/superapp-3.2.1.apk" download>
+        Download APK (24.1 MB)
+    </a>
+
+    <!-- Ezoic ad container (simulated) -->
+    <div class="ezoic-ad ezoic-under_first_paragraph" id="ezwrp-001">
+        <ins class="adsbygoogle"
+             style="display:inline-block; width:728px; height:90px"
+             data-ad-slot="1234567890">
+        </ins>
+    </div>
+
+    <p>Version notes: Bug fixes and performance improvements.</p>
+
+    <!-- Another ad-like link -->
+    <div data-ad>
+        <a href="https://ad-network.example.com/offer" role="button"
+           style="display:block; padding:20px; background:#FF9800; color:white;
+                text-align:center; font-size:20px; border-radius:8px;
+                text-decoration:none; cursor:pointer;">
+            Continue to Download
+        </a>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test Fixture — High Element Count (Capping Stress)</title>
+    <style>
+        body { margin: 0; font-family: sans-serif; }
+        .page-header { background: #1a1a2e; color: white; padding: 12px 16px; }
+        .page-header a { color: #8bc6ec; text-decoration: none; margin: 0 6px; font-size: 14px; }
+
+        .sidebar { float: left; width: 220px; padding: 12px; background: #f5f5f5; }
+        .sidebar a { display: block; padding: 6px 10px; color: #333; text-decoration: none; font-size: 13px; }
+
+        .main { margin-left: 240px; padding: 24px; }
+
+        .breadcrumb a { color: #666; text-decoration: none; font-size: 13px; margin: 0 4px; }
+
+        .version-table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+        .version-table td, .version-table th { padding: 8px 12px; border: 1px solid #ddd; font-size: 13px; }
+        .version-table a { color: #1976D2; text-decoration: none; }
+
+        .pagination a { display: inline-block; padding: 6px 12px; margin: 2px; border: 1px solid #ccc; color: #333; text-decoration: none; font-size: 13px; }
+
+        .footer a { color: #aaa; text-decoration: none; margin: 0 8px; font-size: 12px; }
+        .footer { background: #222; color: #aaa; padding: 16px; text-align: center; clear: both; }
+
+        /* Ad styles */
+        .ad-banner-top {
+            position: fixed; top: 0; left: 0; right: 0; height: 60px;
+            background: #e53935; color: white; display: flex;
+            align-items: center; justify-content: center; z-index: 9999;
+        }
+        .ad-banner-top a { color: white; text-decoration: none; font-weight: bold; font-size: 16px; }
+
+        .ad-container { margin: 16px 0; padding: 12px; border: 1px solid #e0e0e0; border-radius: 6px; position: relative; text-align: center; }
+        .ad-container .fake-download-btn {
+            display: inline-block; padding: 14px 32px;
+            background: #43A047; color: white; text-decoration: none;
+            border-radius: 4px; font-size: 18px; font-weight: bold; cursor: pointer;
+        }
+
+        .ad-sidebar-unit { margin: 12px 0; padding: 10px; background: #fff8e1; border: 1px solid #ffe082; text-align: center; }
+        .ad-sidebar-unit a { color: #e65100; text-decoration: none; font-size: 13px; font-weight: bold; display: block; padding: 8px; }
+
+        .ezoic-ad { margin: 16px 0; min-height: 90px; background: #fafafa; text-align: center; }
+
+        .real-download {
+            display: inline-block; padding: 12px 24px;
+            background: #1976D2; color: white; text-decoration: none;
+            border-radius: 4px; font-size: 16px; cursor: pointer;
+        }
+    </style>
+</head>
+<body style="padding-top: 60px;">
+
+<!-- AD 1: Fixed top banner -->
+<div class="ad-banner-top" data-ad>
+    <a href="https://ad.example.com/top-banner" target="_blank">
+        Get CleanerPro — Speed Up Your Phone!
+    </a>
+    <span style="position:absolute;right:8px;top:2px;font-size:9px;opacity:0.5;">Ad</span>
+</div>
+
+<!-- Page header with nav links (8 links) -->
+<div class="page-header">
+    <a href="/home">Home</a>
+    <a href="/apps">Apps</a>
+    <a href="/games">Games</a>
+    <a href="/uploads">Uploads</a>
+    <a href="/faq">FAQ</a>
+    <a href="/about">About</a>
+    <a href="/contact">Contact</a>
+    <a href="/blog">Blog</a>
+</div>
+
+<!-- Sidebar with navigation links (25 links) -->
+<div class="sidebar">
+    <strong>Categories</strong>
+    <a href="/cat/communication">Communication</a>
+    <a href="/cat/social">Social</a>
+    <a href="/cat/photography">Photography</a>
+    <a href="/cat/video-players">Video Players</a>
+    <a href="/cat/music-audio">Music &amp; Audio</a>
+    <a href="/cat/productivity">Productivity</a>
+    <a href="/cat/tools">Tools</a>
+    <a href="/cat/entertainment">Entertainment</a>
+    <a href="/cat/education">Education</a>
+    <a href="/cat/health">Health &amp; Fitness</a>
+    <a href="/cat/finance">Finance</a>
+    <a href="/cat/shopping">Shopping</a>
+    <a href="/cat/travel">Travel &amp; Local</a>
+    <a href="/cat/news">News &amp; Magazines</a>
+    <a href="/cat/maps">Maps &amp; Navigation</a>
+    <a href="/cat/food">Food &amp; Drink</a>
+    <a href="/cat/lifestyle">Lifestyle</a>
+    <a href="/cat/business">Business</a>
+    <a href="/cat/weather">Weather</a>
+    <a href="/cat/sports">Sports</a>
+    <a href="/cat/books">Books &amp; Reference</a>
+    <a href="/cat/medical">Medical</a>
+    <a href="/cat/art">Art &amp; Design</a>
+    <a href="/cat/auto">Auto &amp; Vehicles</a>
+    <a href="/cat/dating">Dating</a>
+
+    <!-- AD 2: Sidebar ad unit -->
+    <div class="ad-sidebar-unit" data-ad-slot="sidebar-1">
+        <a href="https://ad.example.com/sidebar-vpn" target="_blank">Free VPN — Protect Yourself</a>
+    </div>
+
+    <!-- AD 3: Second sidebar ad -->
+    <div class="ad-sidebar-unit" data-ad-slot="sidebar-2">
+        <a href="https://ad.example.com/sidebar-cleaner" target="_blank">Phone Cleaner — Free Download</a>
+    </div>
+</div>
+
+<!-- Main content -->
+<div class="main">
+    <!-- Breadcrumbs (5 links) -->
+    <div class="breadcrumb">
+        <a href="/">Home</a> &gt;
+        <a href="/apk">APK</a> &gt;
+        <a href="/apk/tools">Tools</a> &gt;
+        <a href="/apk/tools/superapp">SuperApp</a> &gt;
+        <a href="/apk/tools/superapp/3.2.1">v3.2.1</a>
+    </div>
+
+    <h1>Download SuperApp v3.2.1</h1>
+
+    <!-- AD 4: Disguised download button -->
+    <div class="ad-container" data-ad-slot="disguised-dl-1">
+        <a class="fake-download-btn" href="https://ad.example.com/disguised-download" target="_blank">
+            Download Latest Version
+        </a>
+    </div>
+
+    <!-- Real download -->
+    <a class="real-download" href="/files/superapp-3.2.1.apk" download>
+        Download APK (24.1 MB)
+    </a>
+
+    <!-- Version history table with links (20 links) -->
+    <h2>All Versions</h2>
+    <table class="version-table">
+        <thead><tr><th>Version</th><th>Date</th><th>Size</th><th>Download</th></tr></thead>
+        <tbody>
+        <tr><td>3.2.1</td><td>2025-01-15</td><td>24.1 MB</td><td><a href="/files/superapp-3.2.1.apk">Download</a></td></tr>
+        <tr><td>3.2.0</td><td>2025-01-02</td><td>23.8 MB</td><td><a href="/files/superapp-3.2.0.apk">Download</a></td></tr>
+        <tr><td>3.1.9</td><td>2024-12-18</td><td>23.5 MB</td><td><a href="/files/superapp-3.1.9.apk">Download</a></td></tr>
+        <tr><td>3.1.8</td><td>2024-12-01</td><td>23.2 MB</td><td><a href="/files/superapp-3.1.8.apk">Download</a></td></tr>
+        <tr><td>3.1.7</td><td>2024-11-15</td><td>22.9 MB</td><td><a href="/files/superapp-3.1.7.apk">Download</a></td></tr>
+        <tr><td>3.1.6</td><td>2024-11-01</td><td>22.7 MB</td><td><a href="/files/superapp-3.1.6.apk">Download</a></td></tr>
+        <tr><td>3.1.5</td><td>2024-10-15</td><td>22.4 MB</td><td><a href="/files/superapp-3.1.5.apk">Download</a></td></tr>
+        <tr><td>3.1.4</td><td>2024-10-01</td><td>22.1 MB</td><td><a href="/files/superapp-3.1.4.apk">Download</a></td></tr>
+        <tr><td>3.1.3</td><td>2024-09-15</td><td>21.8 MB</td><td><a href="/files/superapp-3.1.3.apk">Download</a></td></tr>
+        <tr><td>3.1.2</td><td>2024-09-01</td><td>21.5 MB</td><td><a href="/files/superapp-3.1.2.apk">Download</a></td></tr>
+        <tr><td>3.1.1</td><td>2024-08-15</td><td>21.2 MB</td><td><a href="/files/superapp-3.1.1.apk">Download</a></td></tr>
+        <tr><td>3.1.0</td><td>2024-08-01</td><td>20.9 MB</td><td><a href="/files/superapp-3.1.0.apk">Download</a></td></tr>
+        <tr><td>3.0.9</td><td>2024-07-15</td><td>20.6 MB</td><td><a href="/files/superapp-3.0.9.apk">Download</a></td></tr>
+        <tr><td>3.0.8</td><td>2024-07-01</td><td>20.3 MB</td><td><a href="/files/superapp-3.0.8.apk">Download</a></td></tr>
+        <tr><td>3.0.7</td><td>2024-06-15</td><td>20.0 MB</td><td><a href="/files/superapp-3.0.7.apk">Download</a></td></tr>
+        <tr><td>3.0.6</td><td>2024-06-01</td><td>19.7 MB</td><td><a href="/files/superapp-3.0.6.apk">Download</a></td></tr>
+        <tr><td>3.0.5</td><td>2024-05-15</td><td>19.4 MB</td><td><a href="/files/superapp-3.0.5.apk">Download</a></td></tr>
+        <tr><td>3.0.4</td><td>2024-05-01</td><td>19.1 MB</td><td><a href="/files/superapp-3.0.4.apk">Download</a></td></tr>
+        <tr><td>3.0.3</td><td>2024-04-15</td><td>18.8 MB</td><td><a href="/files/superapp-3.0.3.apk">Download</a></td></tr>
+        <tr><td>3.0.2</td><td>2024-04-01</td><td>18.5 MB</td><td><a href="/files/superapp-3.0.2.apk">Download</a></td></tr>
+        </tbody>
+    </table>
+
+    <!-- AD 5: Ezoic mid-content ad -->
+    <div class="ezoic-ad ezoic-mid_content" id="ezwrp-201">
+        <ins class="adsbygoogle"
+             style="display:inline-block;width:728px;height:90px"
+             data-ad-slot="9876543210">
+        </ins>
+    </div>
+
+    <!-- Pagination (10 links) -->
+    <div class="pagination">
+        <a href="/superapp?page=1">1</a>
+        <a href="/superapp?page=2">2</a>
+        <a href="/superapp?page=3">3</a>
+        <a href="/superapp?page=4">4</a>
+        <a href="/superapp?page=5">5</a>
+        <a href="/superapp?page=6">6</a>
+        <a href="/superapp?page=7">7</a>
+        <a href="/superapp?page=8">8</a>
+        <a href="/superapp?page=9">9</a>
+        <a href="/superapp?page=10">10</a>
+    </div>
+</div>
+
+<!-- Footer with links (8 links) -->
+<div class="footer">
+    <a href="/terms">Terms</a>
+    <a href="/privacy">Privacy</a>
+    <a href="/dmca">DMCA</a>
+    <a href="/advertise">Advertise</a>
+    <a href="/sitemap">Sitemap</a>
+    <a href="/rss">RSS</a>
+    <a href="/api">API</a>
+    <a href="/status">Status</a>
+</div>
+
+<!-- AD 6: Bottom sticky bar -->
+<div style="position:fixed;bottom:0;left:0;right:0;height:70px;background:#212121;
+            display:flex;align-items:center;justify-content:center;z-index:9998;" data-ad>
+    <a href="https://ad.example.com/bottom-sticky" target="_blank"
+       style="color:white;text-decoration:none;font-size:15px;font-weight:bold;padding:10px 24px;
+              background:#e65100;border-radius:4px;">
+        Install VPN Now — Limited Offer
+    </a>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Test Fixture — AdSense Nested Structure with Sibling Labels</title>
+  <style>
+    body { margin: 0; font-family: sans-serif; padding: 24px; }
+    .content { max-width: 800px; margin: 0 auto; }
+    .content p { line-height: 1.6; margin: 16px 0; }
+
+    /* Realistic ad wrapper styling (mirrors APK Mirror layout) */
+    .ad-slot-wrapper { margin: 20px 0; text-align: center; }
+    .advertisement-text {
+      display: block; font-size: 10px; color: #999;
+      text-transform: uppercase; letter-spacing: 1px;
+      margin-bottom: 4px; text-align: center;
+    }
+
+    /* Real download button */
+    .real-download {
+      display: inline-block; padding: 12px 24px;
+      background: #1976D2; color: white; text-decoration: none;
+      border-radius: 4px; font-size: 16px; cursor: pointer;
+    }
+
+    /* Ezoic realistic wrapper */
+    .ezoic_ad_unit { margin: 20px 0; min-height: 250px; text-align: center; }
+  </style>
+</head>
+<body>
+
+<div class="content">
+  <h1>Download SuperApp v3.2.1</h1>
+  <p>Your download will begin shortly. Please verify your device compatibility below.</p>
+
+  <!-- PATTERN 1: Realistic ins.adsbygoogle > div#aswift_N_host > iframe#aswift_N -->
+  <!-- With PATTERN 2: Sibling advertisement label OUTSIDE the ad container -->
+  <div class="ad-slot-wrapper">
+    <span class="advertisement-text">Advertisement</span>
+    <ins class="adsbygoogle"
+         style="display:inline-block;width:728px;height:90px"
+         data-ad-client="ca-pub-0000000000000000"
+         data-ad-slot="1111111111">
+      <div id="aswift_1_host" style="border:none;height:90px;width:728px;margin:0;padding:0;position:relative;
+                        visibility:visible;background-color:transparent;display:inline-block;">
+        <iframe id="aswift_1" src="about:blank" width="728" height="90"
+                style="left:0;position:absolute;top:0;border:0;"
+                title="Advertisement" sandbox="allow-scripts allow-popups">
+        </iframe>
+      </div>
+    </ins>
+  </div>
+
+  <p>SuperApp v3.2.1 includes performance fixes and a redesigned settings page.</p>
+
+  <!-- Real download -->
+  <a class="real-download" href="/files/superapp-3.2.1.apk" download>
+    Download APK (24.1 MB)
+  </a>
+
+  <p>Compatible with Android 8.0 and above. Requires 50 MB of free storage.</p>
+
+  <!-- PATTERN 1+2 again: Second ad slot, same structure, different IDs -->
+  <div class="ad-slot-wrapper">
+    <span class="advertisement-text">Advertisement</span>
+    <ins class="adsbygoogle"
+         style="display:inline-block;width:336px;height:280px"
+         data-ad-client="ca-pub-0000000000000000"
+         data-ad-slot="2222222222">
+      <div id="aswift_2_host" style="border:none;height:280px;width:336px;margin:0;padding:0;position:relative;
+                        visibility:visible;background-color:transparent;display:inline-block;">
+        <iframe id="aswift_2" src="about:blank" width="336" height="280"
+                style="left:0;position:absolute;top:0;border:0;"
+                title="Advertisement" sandbox="allow-scripts allow-popups">
+        </iframe>
+      </div>
+    </ins>
+  </div>
+
+  <p>Check the changelog for a full list of improvements in this release.</p>
+
+  <!-- PATTERN 3: Ezoic realistic class/id naming -->
+  <div class="ezoic_ad_unit" id="ezwrp-103">
+    <span class="advertisement-text">Advertisement</span>
+    <div id="ezoic-pub-ad-placeholder-103" style="min-height:250px;">
+      <ins class="adsbygoogle"
+           style="display:inline-block;width:300px;height:250px"
+           data-ad-client="ca-pub-0000000000000000"
+           data-ad-slot="3333333333">
+        <div id="aswift_3_host" style="border:none;height:250px;width:300px;margin:0;padding:0;position:relative;
+                            visibility:visible;background-color:transparent;display:inline-block;">
+          <iframe id="aswift_3" src="about:blank" width="300" height="250"
+                  style="left:0;position:absolute;top:0;border:0;"
+                  title="Advertisement" sandbox="allow-scripts allow-popups">
+          </iframe>
+        </div>
+      </ins>
+    </div>
+  </div>
+
+  <p>Need an older version? Browse the <a href="/superapp/versions">version archive</a>.</p>
+</div>
+
+</body>
+</html>

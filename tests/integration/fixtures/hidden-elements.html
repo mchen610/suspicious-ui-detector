@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Test Fixture — Hidden Elements</title>
+  <style>
+    body { margin: 0; font-family: sans-serif; padding: 24px; }
+
+    .hidden-display-none { display: none; }
+    .hidden-visibility { visibility: hidden; }
+    .tiny-element { width: 1px; height: 1px; overflow: hidden; }
+    .zero-size { width: 0; height: 0; }
+    .offscreen { position: absolute; left: -9999px; }
+
+    .visible-btn {
+      display: inline-block; padding: 12px 24px;
+      background: #2196F3; color: white; border: none;
+      border-radius: 4px; cursor: pointer; font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+<h1>Hidden Elements Test</h1>
+
+<!-- These should be FILTERED OUT by discoverCandidates -->
+<a href="/hidden1" class="hidden-display-none">Hidden Link (display:none)</a>
+<button class="hidden-visibility">Hidden Button (visibility:hidden)</button>
+<a href="/tiny" class="tiny-element">Tiny Link (1x1px)</a>
+<button class="zero-size">Zero Size Button</button>
+
+<!-- This is offscreen but NOT display:none/visibility:hidden and is >= minSize,
+     so it WILL pass the filter -->
+<a href="/offscreen" class="offscreen"
+   style="width:100px;height:40px;display:block;">
+  Offscreen Link
+</a>
+
+<!-- These SHOULD be discovered -->
+<button class="visible-btn">Visible Button</button>
+<a href="/real-link" style="display:inline-block;padding:10px 20px;">
+  Visible Link
+</a>
+<div role="button" style="padding:15px;background:#eee;cursor:pointer;display:inline-block;">
+  Role Button
+</div>
+</body>
+</html>
