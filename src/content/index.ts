@@ -1,90 +1,72 @@
 /**
- * This file orchestrates the DOM parsing and extraction pipeline:
- * 'selector.ts' -> candidate list -> 'extractor.ts' ->
- *      'ExtractionResult' list -> 'chrome.runtime.sendMessage()' ->
- *      background service worker -> SLM inference engine
+ * The content script orchestrates the DOM parsing and extraction pipeline:
+ *  1.  Candidate discovery (selectors.ts)
+ *  2.  Context extraction (extractor.ts)
+ *  3.  EvidencePacket assembly (extractor.ts)
+ *  4.  Passing the 'EvidencePacket' to the background
+ *      service worker for SLM inference
+ *
+ * The content script also retains a packet ID to DOM element mapping used in
+ * the visual highlighting of "suspicious" elements flagged by the SLM and
+ * returned via the background service worker.
  */
 
+import { ExtractionResult } from "../shared/types"
 import { discoverCandidates } from "./selectors";
-import { extractEvidence } from "./extractor";
+import { extractEvidence, buildElementMap } from "./extractor";
 import { DEFAULT_CONFIG } from "./config";
 
 
-const candidateList = discoverCandidates(document, DEFAULT_CONFIG);
-const result = extractEvidence(candidateList, DEFAULT_CONFIG);
+// maps packet IDs to DOM elements
+let elementMap = new Map<number, HTMLElement>();
 
-// Signal bucketing (temp to visualize classification)
-const buckets = {
-    high: [] as string[],
-    medium: [] as string[],
-    low: [] as string[],
-};
+/**
+ * Runs discovery + extraction pipeline. Returns a serializable
+ * 'ExtractionResult' for message passing and updates the 'elementMap'.
+ */
+function runPipeline(): ExtractionResult {
+    const candidates = discoverCandidates(document, DEFAULT_CONFIG);
+    const result = extractEvidence(candidates, DEFAULT_CONFIG);
 
-for (const pkt of result.packets) {
-    const isFixed = pkt.style.pos === "fixed" || pkt.style.pos === "sticky";
-    const viewport = pkt.position.viewportCoverageRatio * 100;
-    const hasAdText = pkt.surroundingText.some((t) =>
-        /\bads?\b|adverti|sponsor|download|install|continue/i.test(t)
-    );
-    const hasStrongAdText = pkt.surroundingText.some((t) =>
-        /\badvertisement\b|\bsponsored\b/i.test(t)
-    );
+    elementMap = buildElementMap(candidates);
 
-    const signals = [
-        isFixed && "fixed-pos",
-        viewport > 2.5 && "large-vp",
-        hasStrongAdText && "strong-ad-text",
-        hasAdText && !hasStrongAdText && "ad-text",
-        pkt.tagName === "iframe" && "is-iframe",
-    ].filter(Boolean) as string[];
-
-    const tag =
-        `#${pkt.id} <${pkt.tagName}> [${signals.join(", ")}]` +
-        ` vp=${viewport.toFixed(2)}%` +
-        ` @(${Math.round(pkt.position.top)},${Math.round(pkt.position.left)})` +
-        ` ${Math.round(pkt.position.width)}x${Math.round(pkt.position.height)}`;
-
-    if (signals.length >= 2 || hasStrongAdText) buckets.high.push(tag);
-    else if (signals.length === 1)              buckets.medium.push(tag);
-    else                                        buckets.low.push(tag);
+    return result;
 }
 
-// ad-container checker (made a function to support delayed rechecks) since many ad networks
-// like Ezoic, Google AdSense, Google Publisher Tag, etc. inject content asynchronously
-function checkAdSlots(label: string): void {
-    const slots = document.querySelectorAll(
-        DEFAULT_CONFIG.adContainerSelectors
-    );
+/**
+ * Handles classification results received from the background service
+ * worker. Delegates highlighting of each classification result to the
+ * highlighting module -> TODO
+ */
+function handleClassifications(
+    classifications: Array<{ id: number; category: string; confidence: string }>
+): void {
+    for (const result of classifications) {
+        const elem = elementMap.get(result.id);
+        if (!elem) continue;
 
-    const found: string[] = [];
-    for (const elem of slots) {
-        const rect = (elem as HTMLElement).getBoundingClientRect();
-        const style = getComputedStyle(elem);
+        // TODO: (SUS-15 Visual Highlighting) apply visual overlay to 'elem' using
+        //  result.category and result.confidence
 
-        if ((rect.width === 0 && rect.height === 0) || style.display === "none") continue;
-
-        const iframes = elem.querySelectorAll("iframe").length;
-        const populated = elem.children.length > 0 && (elem as HTMLElement).scrollHeight > 1;
-
-        found.push(
-            `<${elem.tagName.toLowerCase()}>` +
-            ` ${elem.id || elem.className.toString().slice(0, 40)}` +
-            ` @(${Math.round(rect.top)},${Math.round(rect.left)})` +
-            ` ${Math.round(rect.width)}x${Math.round(rect.height)}` +
-            ` children=${elem.children.length} iframes=${iframes}` +
-            ` populated=${populated}`
+        console.debug(
+            `#${result.id} <${elem.tagName.toLowerCase()}>`,
+            `classified as ${result.category} (${result.confidence})`,
         );
-
-        console.log(`Ad-slot check [${label}] (${found.length})`);
-        found.forEach((slot) => console.log(slot));
     }
 }
 
-// console logging
-console.log(`HIGH signal (${buckets.high.length}):`, buckets.high);
-console.log(`MEDIUM signal (${buckets.medium.length}):`, buckets.medium);
-console.log(`LOW signal (${buckets.low.length}):`, buckets.low);
+// Entry point
 
-checkAdSlots("t=0s");
-// setTimeout(() => checkAdSlots("t=3s"), 3000);
-// setTimeout(() => checkAdSlots("t=6s"), 6000);
+const extractionResult = runPipeline();
+
+console.debug(
+    `extracted ${extractionResult.packets.length} packets`,
+    `from ${extractionResult.url}`,
+);
+
+// TODO: (SUS-10 Message Passing) Send 'extractionResult' to the background service worker
+//  via 'chrome.runtime.sendMessage' and wait for a response, then feeding the classification
+//  result into 'handleClassifications' which performs the visual highlighting.
+
+// TODO: Consider setting up a MutationObserver or delayed recheck that call 'runPipeline'
+//  again after ad networks have injected content (if needed).
