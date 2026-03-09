@@ -29,6 +29,12 @@ export function extractEvidence(
     };
 }
 
+export function buildElementMap(candidates: HTMLElement[]): Map<number, HTMLElement> {
+    return new Map(candidates.map(
+        (elem, i) => [i, elem])
+    );
+}
+
 function buildPacket(
     elem: HTMLElement,
     index: number,
@@ -169,7 +175,7 @@ function extractSurroundingText(
         const text = collectChildText(curr, config);
         if (text) texts.push(text);
 
-        collectSiblingText(curr, "nextElementSibling", config.siblingRadius, texts);
+        collectSiblingText(curr, "previousElementSibling", config.siblingRadius, texts);
         collectSiblingText(curr, "nextElementSibling", config.siblingRadius, texts);
 
         curr = curr.parentElement;
