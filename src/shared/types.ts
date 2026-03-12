@@ -3,7 +3,12 @@
  * All fields are non-Optional since they are either required by the SLM
  * for classification, the background service worker for routing or the
  * popup for display.
+ * This file also defines the shape of what the SLM produces, where the
+ * field 'explanation' is currently optional under the guidelines of our MVP
+ * but planned to be made permanent for future stretch goals.
  */
+
+// Extraction Pipeline
 
 /**
  * Structured context extracted from a single interactive DOM element.
@@ -58,4 +63,14 @@ export interface ExtractionResult {
     timestamp: string;              // ISO formatted
     candidateCount: number;         // Number of UI elements found (prior to capping)
     packets: EvidencePacket[];      // capped at 'config.maxElems'
+}
+
+// Classification Pipeline
+
+/** Output of SLM classification on a single 'EvidencePacket' */
+export interface ClassificationResult {
+    id: number;                     // corresponds with 'EvidencePacket.id'
+    category: string;               // Ex. "disguised-ad", "visual-interference", "benign"
+    confidence: string;             // Ex. "low", "medium", "high"
+    explanation?: string;           // optional brief SLM rationale
 }

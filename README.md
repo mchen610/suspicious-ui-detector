@@ -34,35 +34,29 @@ require user authentication which would add friction and require the user to tru
 
 ### Unit Tests
 
-Run all unit tests:
-
 ```bash
+# Run all unit tests
 npm run test    # or `npm run test:unit`
-```
 
-Run unit tests for a specific test module (`background/`, `content/`, `popup/`):
-
-```bash
+# Run unit tests for a specific test module (background/, content/, popup/)
 npm run test -- tests/<module>
 ```
 
 ### Integration Tests
 
-Run all integration tests and view Playwright report:
-
 ```bash
+# First build the test bundle (only need be run once)
+npm run test:build-bundle
+
+# Run all integration tests and view Playwright report
 npm run test:integration && npm run playwright:report
-```
 
-Run integration tests for a specific file (`selectors.integration.test.ts`, `extractor.integration.test.t`):
-
-```bash
+# Run integration tests for a specific file (selectors.integration.test.ts, extractor.integration.test.ts)
 npm run test:integration -- tests/integration/<test_file>
 ```
 
-Run all unit and integration tests:
-
 ```bash
+# Run all unit and integration tests
 npm run test:all
 ```
 

@@ -24,6 +24,7 @@ export function discoverCandidates(
         root.querySelectorAll<HTMLElement>(config.adContainerSelectors)
     );
 
+    // deduplicate
     const seen = new Set<HTMLElement>();
     const merged: HTMLElement[] = [];
     for (const elem of [...interactive, ...adContainers]) {
@@ -36,7 +37,7 @@ export function discoverCandidates(
     // Filtering
 
     const filtered = merged.filter((elem) => {
-        // Check if ignored tag first to avoid 'getComputedStyle()' and 'getBoundingClientRect()' calls
+        // check if ignored tag first to avoid 'getComputedStyle()' and 'getBoundingClientRect()' calls
         let curr = elem.parentElement;
         while (curr) {
             if (config.ignoredTags.has(curr.tagName.toLowerCase())) return false;
@@ -53,8 +54,51 @@ export function discoverCandidates(
         return true;
     });
 
-    // Capping
-    return filtered.slice(0, config.maxElems);
+    // Priority Capping
 
-    /** NOTE: Consider sorting by priority prior to capping, if needed. */
+    const adSet = new Set(adContainers);
+
+    // check if element itself or if some ancestor is an ad container
+    const isAdRelated = (elem: HTMLElement): boolean => {
+        if (adSet.has(elem)) return true;
+        return elem.closest(config.adContainerSelectors) !== null;
+    }
+
+    const adFiltered: HTMLElement[] = [];
+    const interactiveFiltered: HTMLElement[] = [];
+    for (const elem of filtered) {
+        if (isAdRelated(elem)) {
+            adFiltered.push(elem);
+        } else {
+            interactiveFiltered.push(elem);
+        }
+    }
+
+    const candidates: HTMLElement[] = [];
+
+    // reserve up to 30% of maxElems slots for ad elements
+    const adCap = Math.ceil(config.maxElems * 0.3);
+    const used = new Set<HTMLElement>();
+    for (const elem of adFiltered) {
+        if (candidates.length >= adCap) break;
+        candidates.push(elem);
+        used.add(elem);
+    }
+
+    // fill remaining slots with interactive elements
+    for (const elem of interactiveFiltered) {
+        if (candidates.length >= config.maxElems) break;
+        candidates.push(elem);
+        used.add(elem);
+    }
+
+    // fill remaining slots (if available) with leftover ad elements
+    for (const elem of adFiltered) {
+        if (candidates.length >= config.maxElems) break;
+        if (!used.has(elem)) {
+            candidates.push(elem);
+        }
+    }
+
+    return candidates;
 }

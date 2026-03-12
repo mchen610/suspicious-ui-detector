@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { injectPipeline, runFullPipeline } from "./helpers/inject";
 import {AncestorStyleEntry, EvidencePacket} from "../../src/shared/types";
 import {EventData} from "node:test";
+import {DEFAULT_CONFIG} from "../../src/content/config";
 
 test.describe("extractEvidence: General Functionality Tests", () => {
 
@@ -332,7 +333,7 @@ test.describe("extractEvidence: Wrapper Isolated Ad Link Tests", () => {
 
 test.describe("extractEvidence: ATTR_NAMES Tests", () => {
    test.beforeEach(async ({ page }) => {
-       await page.goto("/adsbygoogle.html");
+       await page.goto("/adsbygoogle-nested.html");
        await injectPipeline(page);
    });
 
