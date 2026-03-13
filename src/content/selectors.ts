@@ -51,6 +51,11 @@ export function discoverCandidates(
         const rect = elem.getBoundingClientRect();
         if (rect.width < config.minElemWidth || rect.height < config.minElemHeight) return false;
 
+        // skip elements with no meaningful content (no text, no href, no src)
+        const hasText = (elem.textContent || "").trim().length > 0;
+        const hasLink = elem.hasAttribute("href") || elem.hasAttribute("src") || elem.querySelector("a[href], iframe[src]") !== null;
+        if (!hasText && !hasLink) return false;
+
         return true;
     });
 
