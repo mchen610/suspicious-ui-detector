@@ -28,6 +28,23 @@ Think step-by-step in 1-2 plain sentences first. No markdown, no bullet points, 
 let engine: MLCEngineInterface | null = null;
 let engineInitPromise: Promise<MLCEngineInterface> | null = null;
 
+export type PipelineStatus =
+	| { stage: "idle" }
+	| { stage: "loading"; modelId: string; progress: number }
+	| { stage: "classifying"; total: number; done: number }
+	| { stage: "done"; flagged: number };
+
+let currentStatus: PipelineStatus = { stage: "idle" };
+
+function broadcastStatus(status: PipelineStatus) {
+	currentStatus = status;
+	chrome.runtime.sendMessage({ type: "statusUpdate", status }).catch(() => {});
+}
+
+export function getStatus(): PipelineStatus {
+	return currentStatus;
+}
+
 export function getEngine(): Promise<MLCEngineInterface> {
 	if (engine) return Promise.resolve(engine);
 	if (engineInitPromise) return engineInitPromise;
@@ -36,6 +53,7 @@ export function getEngine(): Promise<MLCEngineInterface> {
 	engineInitPromise = CreateMLCEngine(MODEL_ID, {
 		initProgressCallback: ({ text, progress }) => {
 			console.log(`[suspicious-ui-detector] ${(progress * 100).toFixed(0)}% — ${text}`);
+			broadcastStatus({ stage: "loading", modelId: MODEL_ID, progress });
 		},
 	}).then((e) => {
 		engine = e;
@@ -86,6 +104,7 @@ export async function classifyPacketsWithInference(packets: EvidencePacket[], ur
 	console.log(`[suspicious-ui-detector] classifying ${packets.length} packets from ${url}`);
 
 	const results: ClassificationResult[] = [];
+	broadcastStatus({ stage: "classifying", total: packets.length, done: 0 });
 
 	for (const pkt of packets) {
 		const prompt = buildPrompt(pkt);
@@ -112,7 +131,12 @@ export async function classifyPacketsWithInference(packets: EvidencePacket[], ur
 			confidence: suspicious ? "medium" : "low",
 			explanation,
 		});
+
+		broadcastStatus({ stage: "classifying", total: packets.length, done: results.length });
 	}
+
+	const flagged = results.filter(r => r.category !== "benign").length;
+	broadcastStatus({ stage: "done", flagged });
 
 	return { results };
 }
