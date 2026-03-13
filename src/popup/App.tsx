@@ -2,6 +2,12 @@ import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 
+type PipelineStatus =
+	| { stage: "idle" }
+	| { stage: "loading"; modelId: string; progress: number }
+	| { stage: "classifying"; total: number; done: number }
+	| { stage: "done"; flagged: number };
+
 function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange: (v: boolean) => void }) {
 	return (
 		<label className="flex items-center justify-between cursor-pointer">
@@ -21,9 +27,49 @@ function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange:
 	);
 }
 
+function StatusLine({ status }: { status: PipelineStatus }) {
+	switch (status.stage) {
+		case "loading": {
+			const pct = Math.round(status.progress * 100);
+			const name = status.modelId.split("-").slice(0, 2).join("-");
+			return (
+				<span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-400">
+					<span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-pulse" />
+					Loading {name} ({pct}%)
+				</span>
+			);
+		}
+		case "classifying":
+			return (
+				<span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-400">
+					<span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-pulse" />
+					Processing {status.total} element{status.total !== 1 && "s"}...
+				</span>
+			);
+		case "done":
+			return status.flagged > 0 ? (
+				<span className="inline-flex items-center gap-1.5 text-xs font-medium text-red-600">
+					<span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+					{status.flagged} suspicious element{status.flagged !== 1 && "s"} found
+				</span>
+			) : (
+				<span className="inline-flex items-center gap-1.5 text-xs font-medium text-green-600">
+					<span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+					Page looks safe
+				</span>
+			);
+		default:
+			return (
+				<span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-400">
+					<span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-pulse" />
+					Scanning...
+				</span>
+			);
+	}
+}
+
 function App() {
-	const [detectionCount, setDetectionCount] = useState(0);
-	const [loading, setLoading] = useState(true);
+	const [status, setStatus] = useState<PipelineStatus>({ stage: "idle" });
 	const [detectionEnabled, setDetectionEnabled] = useState(true);
 	const [trustThisSite, setTrustThisSite] = useState(false);
 	const [currentHostname, setCurrentHostname] = useState<string | null>(null);
@@ -41,21 +87,23 @@ function App() {
 				setTrustThisSite(hostname !== null && trusted.includes(hostname));
 				setSettingsLoaded(true);
 			});
-
-			if (!tab?.id) {
-				setLoading(false);
-				return;
-			}
-
-			chrome.tabs.sendMessage(tab.id, { type: "getDetections" }, (response) => {
-				if (chrome.runtime.lastError) {
-					setLoading(false);
-					return;
-				}
-				setDetectionCount(response?.count ?? 0);
-				setLoading(false);
-			});
 		});
+
+		// Get current status from background
+		chrome.runtime.sendMessage({ type: "getStatus" }, (response) => {
+			if (!chrome.runtime.lastError && response) {
+				setStatus(response);
+			}
+		});
+
+		// Listen for live status updates
+		const listener = (message: { type: string; status: PipelineStatus }) => {
+			if (message.type === "statusUpdate") {
+				setStatus(message.status);
+			}
+		};
+		chrome.runtime.onMessage.addListener(listener);
+		return () => chrome.runtime.onMessage.removeListener(listener);
 	}, []);
 
 	function handleDetectionEnabled(value: boolean) {
@@ -91,22 +139,7 @@ function App() {
 			</div>
 
 			<div className="px-4 py-3 border-b border-gray-100">
-				{loading ? (
-					<span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-400">
-						<span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-pulse" />
-						Scanning...
-					</span>
-				) : detectionCount > 0 ? (
-					<span className="inline-flex items-center gap-1.5 text-xs font-medium text-red-600">
-						<span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-						{detectionCount} suspicious element{detectionCount !== 1 && "s"} found
-					</span>
-				) : (
-					<span className="inline-flex items-center gap-1.5 text-xs font-medium text-green-600">
-						<span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-						Page looks safe
-					</span>
-				)}
+				<StatusLine status={status} />
 			</div>
 
 			{settingsLoaded && (
