@@ -1,0 +1,46 @@
+.suspicious-ui-detector-highlighted {
+    outline: 2px solid rgba(255, 50, 50, 0.6) !important;
+    outline-offset: 2px;
+}
+
+.suspicious-ui-detector-glow {
+    position: absolute;
+    pointer-events: none;
+    border: 2px solid rgba(255, 50, 50, 0.5);
+    border-radius: 4px;
+    box-shadow: 0 0 8px rgba(255, 50, 50, 0.4);
+    z-index: 2147483647;
+}
+
+.suspicious-ui-detector-badge {
+    position: absolute;
+    top: -22px;
+    left: 0;
+    background: #e53e3e;
+    color: #fff;
+    font: bold 11px/1 system-ui, sans-serif;
+    padding: 3px 8px;
+    border-radius: 3px;
+    white-space: nowrap;
+    pointer-events: auto;
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+}
+
+.suspicious-ui-detector-badge-x {
+    all: unset;
+    cursor: pointer;
+    margin-left: 6px;
+    font-size: 13px;
+    opacity: 0.8;
+}
+
+.suspicious-ui-detector-badge-x:hover {
+    opacity: 1;
+}
+
+.suspicious-ui-detector-badge:hover {
+    background: #c53030;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
