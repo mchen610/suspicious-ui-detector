@@ -18,6 +18,7 @@
     "playwright:report": "npx playwright show-report"
   },
   "dependencies": {
+    "@mlc-ai/web-llm": "^0.2.81",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
