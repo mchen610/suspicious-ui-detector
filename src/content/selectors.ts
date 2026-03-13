@@ -69,10 +69,17 @@ export function discoverCandidates(
         return elem.closest(config.adContainerSelectors) !== null;
     }
 
+    const interactiveSet = new Set(interactive);
+
     const adFiltered: HTMLElement[] = [];
     const interactiveFiltered: HTMLElement[] = [];
     for (const elem of filtered) {
         if (isAdRelated(elem)) {
+            // Skip ad containers that have interactive descendants already in the
+            // candidate list — the child is the actual suspicious element.
+            if (adSet.has(elem) && filtered.some(other => interactiveSet.has(other) && elem.contains(other) && other !== elem)) {
+                continue;
+            }
             adFiltered.push(elem);
         } else {
             interactiveFiltered.push(elem);
