@@ -176,4 +176,15 @@ chrome.runtime.onMessage.addListener((message) => {
 
 // --- Entry point ---
 
-runDetection();
+chrome.storage.local.get(["detectionEnabled", "trustedSites"], (settings) => {
+    if (settings.detectionEnabled === false) {
+        console.debug("[suspicious-ui-detector] detection disabled, skipping");
+        return;
+    }
+    const trusted: string[] = settings.trustedSites ?? [];
+    if (trusted.includes(window.location.hostname)) {
+        console.debug("[suspicious-ui-detector] site is trusted, skipping");
+        return;
+    }
+    runDetection();
+});
