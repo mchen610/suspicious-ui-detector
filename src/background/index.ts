@@ -1,4 +1,4 @@
-import { classifyPacketsWithInference } from "./llm";
+import { classifyPacketsWithInference, getStatus } from "./llm";
 import { EvidencePacket } from "../shared/types";
 
 interface ClassifyMessage {
@@ -33,5 +33,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 	if (message.type === "classify") {
 		handleClassify(message as ClassifyMessage).then(sendResponse);
 		return true;
+	} else if (message.type === "getStatus") {
+		sendResponse(getStatus());
 	}
 });
