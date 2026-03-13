@@ -2,12 +2,6 @@ import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 
-interface Detection {
-	id: number;
-	type: string;
-	reason: string;
-}
-
 function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange: (v: boolean) => void }) {
 	return (
 		<label className="flex items-center justify-between cursor-pointer">
@@ -28,7 +22,7 @@ function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange:
 }
 
 function App() {
-	const [detections, setDetections] = useState<Detection[]>([]);
+	const [detectionCount, setDetectionCount] = useState(0);
 	const [loading, setLoading] = useState(true);
 	const [detectionEnabled, setDetectionEnabled] = useState(true);
 	const [trustThisSite, setTrustThisSite] = useState(false);
@@ -58,7 +52,7 @@ function App() {
 					setLoading(false);
 					return;
 				}
-				setDetections(response ?? []);
+				setDetectionCount(response?.count ?? 0);
 				setLoading(false);
 			});
 		});
@@ -102,10 +96,10 @@ function App() {
 						<span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-pulse" />
 						Scanning...
 					</span>
-				) : detections.length > 0 ? (
+				) : detectionCount > 0 ? (
 					<span className="inline-flex items-center gap-1.5 text-xs font-medium text-red-600">
 						<span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-						{detections.length} suspicious element{detections.length !== 1 && "s"} found
+						{detectionCount} suspicious element{detectionCount !== 1 && "s"} found
 					</span>
 				) : (
 					<span className="inline-flex items-center gap-1.5 text-xs font-medium text-green-600">

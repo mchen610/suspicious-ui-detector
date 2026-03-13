@@ -164,13 +164,15 @@ window.addEventListener("scroll", repositionAllOverlays, { passive: true });
 window.addEventListener("resize", repositionAllOverlays, { passive: true });
 
 // Listen for toggle messages from the popup
-chrome.runtime.onMessage.addListener((message) => {
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message.type === "detectionToggle") {
         if (message.enabled) {
             runDetection();
         } else {
             clearAllOverlays();
         }
+    } else if (message.type === "getDetections") {
+        sendResponse({ count: flaggedElements.size });
     }
 });
 
