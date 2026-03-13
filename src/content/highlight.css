@@ -31,7 +31,7 @@
 .suspicious-ui-detector-badge-x {
     all: unset;
     cursor: pointer;
-    margin-left: 6px;
+    margin-right: 6px;
     font-size: 13px;
     opacity: 0.8;
 }
