@@ -1,4 +1,4 @@
-import { classifyPacketsWithInference, getStatus } from "./llm";
+import { classifyPacketsWithInference, getStatusForTab } from "./llm";
 import { EvidencePacket } from "../shared/types";
 
 interface ClassifyMessage {
@@ -17,10 +17,10 @@ chrome.runtime.onStartup.addListener(() => {
 	console.log("[suspicious-ui-detector] browser startup detected");
 });
 
-async function handleClassify({ packets, url }: ClassifyMessage) {
+async function handleClassify({ packets, url }: ClassifyMessage, tabId?: number) {
 	console.log(`[suspicious-ui-detector] received ${packets.length} packets from ${url}`);
 	try {
-		const { results } = await classifyPacketsWithInference(packets, url);
+		const { results } = await classifyPacketsWithInference(packets, url, tabId);
 		console.log("[suspicious-ui-detector] classification complete:", results);
 		return { results };
 	} catch (err) {
@@ -29,11 +29,12 @@ async function handleClassify({ packets, url }: ClassifyMessage) {
 	}
 }
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 	if (message.type === "classify") {
-		handleClassify(message as ClassifyMessage).then(sendResponse);
+		handleClassify(message as ClassifyMessage, sender.tab?.id).then(sendResponse);
 		return true;
 	} else if (message.type === "getStatus") {
-		sendResponse(getStatus());
+		const tabId = message.tabId;
+		sendResponse(tabId !== undefined ? getStatusForTab(tabId) : { stage: "idle" });
 	}
 });

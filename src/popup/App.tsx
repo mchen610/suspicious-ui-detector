@@ -76,8 +76,17 @@ function App() {
 	const [settingsLoaded, setSettingsLoaded] = useState(false);
 
 	useEffect(() => {
+		let activeTabId: number | undefined;
+		const listener = (message: { type: string; status: PipelineStatus; tabId?: number }) => {
+			if (message.type === "statusUpdate" && (message.tabId === undefined || message.tabId === activeTabId)) {
+				setStatus(message.status);
+			}
+		};
+		chrome.runtime.onMessage.addListener(listener);
+
 		chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
 			const tab = tabs[0];
+			activeTabId = tab?.id;
 			const hostname = tab?.url ? new URL(tab.url).hostname : null;
 			setCurrentHostname(hostname);
 
@@ -87,22 +96,26 @@ function App() {
 				setTrustThisSite(hostname !== null && trusted.includes(hostname));
 				setSettingsLoaded(true);
 			});
-		});
 
-		// Get current status from background
-		chrome.runtime.sendMessage({ type: "getStatus" }, (response) => {
-			if (!chrome.runtime.lastError && response) {
-				setStatus(response);
+			// Get current status for this tab
+			if (activeTabId !== undefined) {
+				chrome.runtime.sendMessage({ type: "getStatus", tabId: activeTabId }, (response) => {
+					if (!chrome.runtime.lastError && response && response.stage !== "idle") {
+						setStatus(response);
+					} else if (activeTabId !== undefined) {
+						// Background has no status — ask the content script directly
+						chrome.tabs.sendMessage(activeTabId, { type: "getDetections" }, (detResponse) => {
+							if (chrome.runtime.lastError) {
+								setStatus({ stage: "done", flagged: 0 });
+								return;
+							}
+							setStatus({ stage: "done", flagged: detResponse?.count ?? 0 });
+						});
+					}
+				});
 			}
 		});
 
-		// Listen for live status updates
-		const listener = (message: { type: string; status: PipelineStatus }) => {
-			if (message.type === "statusUpdate") {
-				setStatus(message.status);
-			}
-		};
-		chrome.runtime.onMessage.addListener(listener);
 		return () => chrome.runtime.onMessage.removeListener(listener);
 	}, []);
 

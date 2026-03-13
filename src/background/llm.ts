@@ -34,15 +34,15 @@ export type PipelineStatus =
 	| { stage: "classifying"; total: number; done: number }
 	| { stage: "done"; flagged: number };
 
-let currentStatus: PipelineStatus = { stage: "idle" };
+const tabStatus = new Map<number, PipelineStatus>();
 
-function broadcastStatus(status: PipelineStatus) {
-	currentStatus = status;
-	chrome.runtime.sendMessage({ type: "statusUpdate", status }).catch(() => {});
+function broadcastStatus(status: PipelineStatus, tabId?: number) {
+	if (tabId !== undefined) tabStatus.set(tabId, status);
+	chrome.runtime.sendMessage({ type: "statusUpdate", status, tabId }).catch(() => {});
 }
 
-export function getStatus(): PipelineStatus {
-	return currentStatus;
+export function getStatusForTab(tabId: number): PipelineStatus {
+	return tabStatus.get(tabId) ?? { stage: "idle" };
 }
 
 export function getEngine(): Promise<MLCEngineInterface> {
@@ -98,13 +98,13 @@ async function classifyOne(eng: MLCEngineInterface, prompt: string): Promise<{ s
 	return { suspicious: lastWord === "SUSPICIOUS", raw };
 }
 
-export async function classifyPacketsWithInference(packets: EvidencePacket[], url?: string): Promise<{ results: ClassificationResult[] }> {
+export async function classifyPacketsWithInference(packets: EvidencePacket[], url?: string, tabId?: number): Promise<{ results: ClassificationResult[] }> {
 	const eng = await getEngine();
 
 	console.log(`[suspicious-ui-detector] classifying ${packets.length} packets from ${url}`);
 
 	const results: ClassificationResult[] = [];
-	broadcastStatus({ stage: "classifying", total: packets.length, done: 0 });
+	broadcastStatus({ stage: "classifying", total: packets.length, done: 0 }, tabId);
 
 	for (const pkt of packets) {
 		const prompt = buildPrompt(pkt);
@@ -130,11 +130,11 @@ export async function classifyPacketsWithInference(packets: EvidencePacket[], ur
 			explanation,
 		});
 
-		broadcastStatus({ stage: "classifying", total: packets.length, done: results.length });
+		broadcastStatus({ stage: "classifying", total: packets.length, done: results.length }, tabId);
 	}
 
 	const flagged = results.filter(r => r.category !== "benign").length;
-	broadcastStatus({ stage: "done", flagged });
+	broadcastStatus({ stage: "done", flagged }, tabId);
 
 	return { results };
 }
