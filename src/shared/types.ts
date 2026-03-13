@@ -23,7 +23,7 @@ export interface EvidencePacket {
     style: StyleData;
     position: PositionData;
     styleAncestry: AncestorStyleEntry[];
-    surroundingText: string[];      // Ex. ["Ad", "Sponsored", "Download", ... "Your file is ready"]
+    elementText: string;
     isInIFrame: boolean;
 }
 
