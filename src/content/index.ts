@@ -69,9 +69,9 @@ function highlightElement(id: number, el: HTMLElement, explanation?: string) {
     const badge = document.createElement("span");
     badge.className = "suspicious-ui-detector-badge";
     const label = explanation || "Flagged as suspicious";
-    badge.innerHTML = `Suspicious <button class="suspicious-ui-detector-badge-x">&times;</button>`;
+    badge.innerHTML = `<button class="suspicious-ui-detector-badge-x">&times;</button>Suspicious `;
     const closeBtn = badge.querySelector(".suspicious-ui-detector-badge-x")!;
-    const textNode = badge.childNodes[0] as Text;
+    const textNode = badge.childNodes[1] as Text;
     badge.addEventListener("mouseenter", () => {
         textNode.textContent = label + " ";
     });
