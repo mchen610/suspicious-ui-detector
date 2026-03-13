@@ -55,7 +55,7 @@ function removeOverlay(id: number) {
     }
 }
 
-function highlightElement(id: number, el: HTMLElement) {
+function highlightElement(id: number, el: HTMLElement, explanation?: string) {
     if (flaggedElements.has(el)) return;
     flaggedElements.add(el);
 
@@ -68,8 +68,16 @@ function highlightElement(id: number, el: HTMLElement) {
     overlay.className = "suspicious-ui-detector-glow";
     const badge = document.createElement("span");
     badge.className = "suspicious-ui-detector-badge";
+    const label = explanation || "Flagged as suspicious";
     badge.innerHTML = `Suspicious <button class="suspicious-ui-detector-badge-x">&times;</button>`;
     const closeBtn = badge.querySelector(".suspicious-ui-detector-badge-x")!;
+    const textNode = badge.childNodes[0] as Text;
+    badge.addEventListener("mouseenter", () => {
+        textNode.textContent = label + " ";
+    });
+    badge.addEventListener("mouseleave", () => {
+        textNode.textContent = "Suspicious ";
+    });
     closeBtn.addEventListener("click", () => removeOverlay(id));
     overlay.appendChild(badge);
     positionOverlay(el, overlay);
@@ -109,7 +117,7 @@ function handleClassifications(
         );
 
         if (result.category !== "benign") {
-            highlightElement(result.id, elem);
+            highlightElement(result.id, elem, result.explanation);
         }
     }
 }
