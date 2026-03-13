@@ -11,14 +11,73 @@
  * returned via the background service worker.
  */
 
-import { ExtractionResult } from "../shared/types"
+import { ExtractionResult, ClassificationResult } from "../shared/types"
 import { discoverCandidates } from "./selectors";
 import { extractEvidence, buildElementMap } from "./extractor";
 import { DEFAULT_CONFIG } from "./config";
+import styles from "./highlight.css?inline";
 
 
 // maps packet IDs to DOM elements
 let elementMap = new Map<number, HTMLElement>();
+
+// --- Overlay / highlight state ---
+
+const overlayMap = new Map<number, { el: HTMLElement; overlay: HTMLDivElement }>();
+let flaggedElements = new Set<HTMLElement>();
+
+function injectStyles() {
+    const style = document.createElement("style");
+    style.textContent = styles;
+    document.head.appendChild(style);
+}
+
+function positionOverlay(el: HTMLElement, overlay: HTMLDivElement) {
+    const rect = el.getBoundingClientRect();
+    overlay.style.top = `${rect.top + window.scrollY}px`;
+    overlay.style.left = `${rect.left + window.scrollX}px`;
+    overlay.style.width = `${rect.width}px`;
+    overlay.style.height = `${rect.height}px`;
+}
+
+function repositionAllOverlays() {
+    for (const { el, overlay } of overlayMap.values()) {
+        positionOverlay(el, overlay);
+    }
+}
+
+function removeOverlay(id: number) {
+    const entry = overlayMap.get(id);
+    if (entry) {
+        entry.overlay.remove();
+        entry.el.classList.remove("suspicious-ui-detector-highlighted");
+        overlayMap.delete(id);
+    }
+}
+
+function highlightElement(id: number, el: HTMLElement) {
+    if (flaggedElements.has(el)) return;
+    flaggedElements.add(el);
+
+    const rect = el.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) return;
+
+    el.classList.add("suspicious-ui-detector-highlighted");
+
+    const overlay = document.createElement("div");
+    overlay.className = "suspicious-ui-detector-glow";
+    const badge = document.createElement("span");
+    badge.className = "suspicious-ui-detector-badge";
+    badge.innerHTML = `Suspicious <button class="suspicious-ui-detector-badge-x">&times;</button>`;
+    const closeBtn = badge.querySelector(".suspicious-ui-detector-badge-x")!;
+    closeBtn.addEventListener("click", () => removeOverlay(id));
+    overlay.appendChild(badge);
+    positionOverlay(el, overlay);
+    document.body.appendChild(overlay);
+    overlayMap.set(id, { el, overlay });
+}
+
+// --- Pipeline ---
 
 /**
  * Runs discovery + extraction pipeline. Returns a serializable
@@ -35,38 +94,67 @@ function runPipeline(): ExtractionResult {
 
 /**
  * Handles classification results received from the background service
- * worker. Delegates highlighting of each classification result to the
- * highlighting module -> TODO
+ * worker. Highlights suspicious elements.
  */
 function handleClassifications(
-    classifications: Array<{ id: number; category: string; confidence: string }>
+    classifications: ClassificationResult[]
 ): void {
     for (const result of classifications) {
         const elem = elementMap.get(result.id);
         if (!elem) continue;
 
-        // TODO: (SUS-15 Visual Highlighting) apply visual overlay to 'elem' using
-        //  result.category and result.confidence
-
         console.debug(
             `#${result.id} <${elem.tagName.toLowerCase()}>`,
             `classified as ${result.category} (${result.confidence})`,
         );
+
+        if (result.category !== "benign") {
+            highlightElement(result.id, elem);
+        }
     }
 }
 
-// Entry point
+// --- Clear all highlights ---
 
-const extractionResult = runPipeline();
+function clearAllOverlays() {
+    for (const [id] of overlayMap) {
+        removeOverlay(id);
+    }
+    flaggedElements.clear();
+}
 
-console.debug(
-    `extracted ${extractionResult.packets.length} packets`,
-    `from ${extractionResult.url}`,
-);
+// --- Run detection ---
 
-// TODO: (SUS-10 Message Passing) Send 'extractionResult' to the background service worker
-//  via 'chrome.runtime.sendMessage' and wait for a response, then feeding the classification
-//  result into 'handleClassifications' which performs the visual highlighting.
+function runDetection() {
+    const extractionResult = runPipeline();
 
-// TODO: Consider setting up a MutationObserver or delayed recheck that call 'runPipeline'
-//  again after ad networks have injected content (if needed).
+    console.debug(
+        `extracted ${extractionResult.packets.length} packets`,
+        `from ${extractionResult.url}`,
+    );
+
+    if (extractionResult.packets.length > 0) {
+        chrome.runtime.sendMessage(
+            { type: "classify", packets: extractionResult.packets, url: extractionResult.url },
+            (response) => {
+                if (chrome.runtime.lastError) {
+                    console.error("[suspicious-ui-detector] classify error:", chrome.runtime.lastError.message);
+                    return;
+                }
+                const results: ClassificationResult[] = response?.results ?? [];
+                console.log("[suspicious-ui-detector] classify results:", results);
+                handleClassifications(results);
+            },
+        );
+    }
+}
+
+// --- Init ---
+
+injectStyles();
+window.addEventListener("scroll", repositionAllOverlays, { passive: true });
+window.addEventListener("resize", repositionAllOverlays, { passive: true });
+
+// --- Entry point ---
+
+runDetection();
