@@ -94,8 +94,8 @@ async function classifyOne(eng: MLCEngineInterface, prompt: string): Promise<{ s
 	});
 
 	const raw = completion.choices[0]?.message?.content ?? "";
-	const lastLine = raw.trim().split("\n").filter(Boolean).pop()?.toUpperCase() ?? "";
-	return { suspicious: lastLine.includes("SUSPICIOUS"), raw };
+	const lastWord = raw.trim().split(/\s+/).pop()?.toUpperCase().replace(/[^A-Z]/g, "") ?? "";
+	return { suspicious: lastWord === "SUSPICIOUS", raw };
 }
 
 export async function classifyPacketsWithInference(packets: EvidencePacket[], url?: string): Promise<{ results: ClassificationResult[] }> {
@@ -121,9 +121,7 @@ export async function classifyPacketsWithInference(packets: EvidencePacket[], ur
 
 		console.log(`[suspicious-ui-detector] #${pkt.id} <${pkt.tagName}> → ${suspicious ? "SUSPICIOUS" : "SAFE"}\nprompt:\n${prompt}\nresponse:\n${raw.trim()}`);
 
-		const cleaned = raw.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
-		const verdictIdx = cleaned.search(/SUSPICIOUS|SAFE/i);
-		const explanation = verdictIdx > 0 ? cleaned.slice(0, verdictIdx).trim() : undefined;
+		const explanation = raw.replace(/<think>[\s\S]*?<\/think>/g, "").trim() || undefined;
 
 		results.push({
 			id: pkt.id,
