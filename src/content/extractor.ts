@@ -48,7 +48,7 @@ function buildPacket(
         style: extractStyle(elem),
         position: extractPosition(elem),
         styleAncestry: extractStyleAncestry(elem, config),
-        surroundingText: extractSurroundingText(elem, config),
+        elementText: (elem.textContent || "").trim().slice(0, config.maxSurroundingTextLength),
         isInIFrame: window !== window.top,
     };
 }
