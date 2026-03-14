@@ -80,87 +80,6 @@ describe("extractAttributes", () => {
     });
 });
 
-describe("extractSurroundingText", () => {
-
-    it("deduplicates identical text fragments", () => {
-        const e = makeElement(
-            `<div>
-                <span>Ad</span>
-                <a id="target" href="#">click</a>
-                <span>Ad</span>
-            </div>`,
-            "#target",
-        );
-
-        const { surroundingText } = extractEvidence([e]).packets[0];
-        const adCount = surroundingText.filter((t) => t === "Ad").length;
-
-        expect(adCount).toBe(1);
-    });
-
-    it("respects siblingRadius upperbound", () => {
-        const e = makeElement(
-            `<div>
-                <p>sibling1</p>
-                <p>sibling2</p>
-                <p>sibling3</p>
-                <p>sibling4</p>
-                <a id="target" href="#">click</a>
-            </div>`,
-            "#target",
-        );
-
-        const { surroundingText } = extractEvidence([e], { ...config, siblingRadius: 2 }).packets[0];
-        const hasSibling1 = surroundingText.includes("sibling1");
-        const hasSibling2 = surroundingText.includes("sibling2");
-        const hasSibling3 = surroundingText.includes("sibling3");
-        const hasSibling4 = surroundingText.includes("sibling4");
-
-        expect(hasSibling1).toBe(false);
-        expect(hasSibling2).toBe(false);
-        expect(hasSibling3).toBe(true);
-        expect(hasSibling4).toBe(true);
-    });
-
-    it("respects maxSurroundingTextFragments cap", () => {
-        const siblings = Array.from(
-            { length: 20 }, (_, i) => `<p>fragment${i}</p>`
-        ).join("");
-
-        const e = makeElement(
-            `<div>${siblings}
-                <a id="target" href="#">click</a>
-            </div>`,
-            "#target",
-        );
-
-        const { surroundingText } = extractEvidence(
-            [e], { ...config, siblingRadius: 20, maxSurroundingTextFragments: 3 }
-        ).packets[0];
-
-        expect(surroundingText.length).toBeLessThanOrEqual(3)
-    });
-
-    it("truncates individual fragments at maxSurroundingTextLength", () => {
-        const text = "y".repeat(500);
-        const e = makeElement(
-            `<div>
-                <p>${text}</p>
-                <a id="target" href="#">click</a>
-            </div>`,
-            "#target",
-        );
-
-        const { surroundingText } = extractEvidence(
-            [e], { ...config, maxSurroundingTextLength: 50 }
-        ).packets[0];
-
-        for (const frag of surroundingText) {
-            expect(frag.length).toBeLessThanOrEqual(50);
-        }
-    });
-});
-
 describe("extractStyleAncestry", () => {
 
     it("stops at the <body> boundary and does not include body or html", () => {
@@ -215,7 +134,7 @@ describe("EvidencePacket", () => {
         expect(typeof pkt.HTMLSnippet).toBe("string");
         expect(typeof pkt.attributes).toBe("object");
         expect(Array.isArray(pkt.styleAncestry)).toBe(true);
-        expect(Array.isArray(pkt.surroundingText)).toBe(true);
+        expect(typeof pkt.elementText).toBe("string");
         expect(typeof pkt.isInIFrame).toBe("boolean");
 
         // style field

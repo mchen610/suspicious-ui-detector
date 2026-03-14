@@ -48,7 +48,7 @@ function buildPacket(
         style: extractStyle(elem),
         position: extractPosition(elem),
         styleAncestry: extractStyleAncestry(elem, config),
-        surroundingText: extractSurroundingText(elem, config),
+        elementText: (elem.textContent || "").trim().slice(0, config.maxSurroundingTextLength),
         isInIFrame: window !== window.top,
     };
 }
@@ -152,86 +152,4 @@ function extractStyleAncestry(
     }
 
     return ancestry;
-}
-
-function extractSurroundingText(
-    elem: HTMLElement,
-    config: ExtractionConfig
-): string[] {
-    const texts: string[] = [];
-
-    // collect candidate's sibling text
-    collectSiblingText(elem, "previousElementSibling", config.siblingRadius, texts);
-    collectSiblingText(elem, "nextElementSibling", config.siblingRadius, texts);
-
-    // parent walk
-    let curr = elem.parentElement;
-    let depth = 0;
-    while (curr && depth < config.ancestorDepth) {
-        const tag = curr.tagName.toLowerCase();
-        if (tag === "body" || tag === "html") break;
-
-        // collect parent's children text
-        const text = collectChildText(curr, config);
-        if (text) texts.push(text);
-
-        collectSiblingText(curr, "previousElementSibling", config.siblingRadius, texts);
-        collectSiblingText(curr, "nextElementSibling", config.siblingRadius, texts);
-
-        curr = curr.parentElement;
-        depth++;
-    }
-
-    // deduplicate, truncate each fragment and cap the overall number of fragments
-    return [...new Set(texts)]
-        .map((txt) => txt.slice(0, config.maxSurroundingTextLength))
-        .slice(0, config.maxSurroundingTextFragments);
-}
-
-/** Helper function that collects textContent from adjacent sibling elements */
-function collectSiblingText(
-    elem: HTMLElement,
-    direction: "previousElementSibling" | "nextElementSibling",
-    radius: number,
-    out: string[],
-): void {
-    let sibling = elem[direction];
-    let count = 0;
-
-    while (sibling && count < radius) {
-        const text = (sibling.textContent || "").trim();
-        if (text) out.push(text);
-        sibling = sibling[direction];
-        count++;
-    }
-}
-
-/**
- * Helper function that collects text from child nodes which are either
- * text nodes or inline elements.
- */
-function collectChildText(parent: HTMLElement, config: ExtractionConfig) {
-    let txt = "";
-
-    for (const node of parent.childNodes) {
-
-        // if text node (ex. "Download") append directly
-        if (node.nodeType === Node.TEXT_NODE) {
-            txt += (node.textContent || "").trim() + " ";
-
-        // o.w. if element node conditionally append textContent (ex. <span>Ad</span>)
-        } else if (node.nodeType === Node.ELEMENT_NODE) {
-            const el = node as HTMLElement;
-            const tag = el.tagName.toLowerCase();
-            const content = (el.textContent || "").trim();
-
-            if (config.contextTextTags.has(tag) && content.length > 0 &&
-                content.length <= config.maxContextTextLength
-            ) {
-                txt += content + " ";
-            }
-        }
-    }
-
-    return txt.trim();
 }
