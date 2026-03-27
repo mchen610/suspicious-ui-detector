@@ -144,15 +144,7 @@ function runDetection() {
     if (extractionResult.packets.length > 0) {
         chrome.runtime.sendMessage(
             { type: "classify", packets: extractionResult.packets, url: extractionResult.url },
-            (response) => {
-                if (chrome.runtime.lastError) {
-                    console.error("[suspicious-ui-detector] classify error:", chrome.runtime.lastError.message);
-                    return;
-                }
-                const results: ClassificationResult[] = response?.results ?? [];
-                console.log("[suspicious-ui-detector] classify results:", results);
-                handleClassifications(results);
-            },
+            () => void chrome.runtime.lastError,
         );
     }
 }
@@ -165,7 +157,9 @@ window.addEventListener("resize", repositionAllOverlays, { passive: true });
 
 // Listen for toggle messages from the popup
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-    if (message.type === "detectionToggle") {
+    if (message.type === "classificationResult") {
+        handleClassifications([message.result]);
+    } else if (message.type === "detectionToggle") {
         if (message.enabled) {
             runDetection();
         } else {

@@ -6,7 +6,7 @@ type PipelineStatus =
 	| { stage: "idle" }
 	| { stage: "loading"; modelId: string; progress: number }
 	| { stage: "classifying"; total: number; done: number }
-	| { stage: "done"; flagged: number };
+	| { stage: "done"; flagged: number }; // flagged is populated by querying the content script
 
 function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange: (v: boolean) => void }) {
 	return (
@@ -39,13 +39,15 @@ function StatusLine({ status }: { status: PipelineStatus }) {
 				</span>
 			);
 		}
-		case "classifying":
+		case "classifying": {
+			const remaining = status.total - status.done;
 			return (
 				<span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-400">
 					<span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-pulse" />
-					Processing {status.total} element{status.total !== 1 && "s"}...
+					{remaining} element{remaining !== 1 && "s"} remaining...
 				</span>
 			);
+		}
 		case "done":
 			return status.flagged > 0 ? (
 				<span className="inline-flex items-center gap-1.5 text-xs font-medium text-red-600">
@@ -77,8 +79,24 @@ function App() {
 
 	useEffect(() => {
 		let activeTabId: number | undefined;
+
+		function queryFlaggedCount() {
+			if (activeTabId === undefined) return;
+			chrome.runtime.sendMessage({ type: "getDetections", tabId: activeTabId }, (response) => {
+				if (chrome.runtime.lastError) {
+					setStatus({ stage: "done", flagged: 0 });
+					return;
+				}
+				setStatus({ stage: "done", flagged: response?.count ?? 0 });
+			});
+		}
+
 		const listener = (message: { type: string; status: PipelineStatus; tabId?: number }) => {
-			if (message.type === "statusUpdate" && (message.tabId === undefined || message.tabId === activeTabId)) {
+			if (message.type !== "statusUpdate") return;
+			if (message.tabId !== undefined && message.tabId !== activeTabId) return;
+			if (message.status.stage === "done") {
+				queryFlaggedCount();
+			} else {
 				setStatus(message.status);
 			}
 		};
@@ -101,16 +119,13 @@ function App() {
 			if (activeTabId !== undefined) {
 				chrome.runtime.sendMessage({ type: "getStatus", tabId: activeTabId }, (response) => {
 					if (!chrome.runtime.lastError && response && response.stage !== "idle") {
-						setStatus(response);
-					} else if (activeTabId !== undefined) {
-						// Background has no status — ask the content script directly
-						chrome.tabs.sendMessage(activeTabId, { type: "getDetections" }, (detResponse) => {
-							if (chrome.runtime.lastError) {
-								setStatus({ stage: "done", flagged: 0 });
-								return;
-							}
-							setStatus({ stage: "done", flagged: detResponse?.count ?? 0 });
-						});
+						if (response.stage === "done") {
+							queryFlaggedCount();
+						} else {
+							setStatus(response);
+						}
+					} else {
+						queryFlaggedCount();
 					}
 				});
 			}
