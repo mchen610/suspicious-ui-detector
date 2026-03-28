@@ -1,5 +1,6 @@
 import { classifyPacketsWithInference, getStatusForTab } from "./llm";
 import { EvidencePacket } from "../shared/types";
+import setDefaultFontSize = chrome.fontSettings.setDefaultFontSize;
 
 interface ClassifyMessage {
 	type: "classify";
@@ -17,6 +18,55 @@ chrome.runtime.onStartup.addListener(() => {
 	console.log("[suspicious-ui-detector] browser startup detected");
 });
 
+// Storage helpers
+
+async function getSettings(): Promise<{ detectionEnabled: boolean, trustedSites: string[] }> {
+	return new Promise((resolve) => {
+		chrome.storage.local.get(["detectionEnabled", "trustedSites"], (result) => {
+			resolve({
+				detectionEnabled: result["detectionEnabled"] !== false,
+				trustedSites: result["trustedSites"] ?? [],
+			});
+		});
+	});
+}
+
+async function setDetectionEnabled(enabled: boolean): Promise<void> {
+	return new Promise((resolve) => {
+		chrome.storage.local.set({ detectionEnabled: enabled}, resolve);
+	});
+}
+
+async function setTrustedSites(sites: string[]): Promise<void> {
+	return new Promise((resolve) => {
+		chrome.storage.local.set({ trustedSites: sites}, resolve);
+	});
+}
+
+// Content script relay helpers
+
+async function sendToTab(tabId: number, message: unknown): Promise<unknown> {
+	return new Promise((resolve) => {
+		chrome.tabs.sendMessage(tabId, message, (response) => {
+			if (chrome.runtime.lastError) {
+				resolve(undefined);
+			} else {
+				resolve(response);
+			}
+		})
+	});
+}
+
+async function getActiveTabId(): Promise<number | undefined> {
+	return new Promise((resolve) => {
+		chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+			resolve(tabs[0]?.id)
+		});
+	});
+}
+
+// Classify handler
+
 async function handleClassify({ packets, url }: ClassifyMessage, tabId?: number) {
 	console.log(`[suspicious-ui-detector] received ${packets.length} packets from ${url}`);
 	try {
@@ -29,12 +79,95 @@ async function handleClassify({ packets, url }: ClassifyMessage, tabId?: number)
 	}
 }
 
+// Central message router
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-	if (message.type === "classify") {
-		handleClassify(message as ClassifyMessage, sender.tab?.id).then(sendResponse);
-		return true;
-	} else if (message.type === "getStatus") {
-		const tabId = message.tabId;
-		sendResponse(tabId !== undefined ? getStatusForTab(tabId) : { stage: "idle" });
+	switch (message.type) {
+
+		// content script messages
+		case "contentReady": {
+			const hostname: string = message.hostname
+			getSettings().then((settings) => {
+				const shouldRun = settings.detectionEnabled && !settings.trustedSites.includes(hostname);
+				sendResponse({ shouldRun })
+			});
+
+			return true;
+		}
+
+		case "classify": {
+			handleClassify(message as ClassifyMessage, sender.tab?.id).then(sendResponse);
+			return true;
+		}
+
+		// popup messages
+		case "getSettings": {
+			getSettings().then((settings) => sendResponse(settings));
+			return true;
+		}
+
+		case "getStatus": {
+			const tabId = message.tabId;
+			sendResponse(tabId !== undefined ? getStatusForTab(tabId) : { stage: "idle" });
+			return false;
+		}
+
+		case "getDetections": {
+			const tabId: number | undefined = message.tabId;
+			if (tabId === undefined) {
+				sendResponse({count: 0});
+				return false;
+			}
+
+			sendToTab(tabId, {type: "getDetections"}).then((response) => {
+				sendResponse({count: (response as any)?.count ?? 0})
+			});
+
+			return true;
+		}
+
+		case "setDetectionEnabled": {
+			const enabled: boolean = message.enabled;
+
+			(async () => {
+				await setDetectionEnabled(enabled);
+
+				// tell content script to stop when disabled/run again when enabled
+				const tabId = message.tabId ?? (await getActiveTabId());
+				if (tabId !== undefined) {
+					await sendToTab(tabId, {type: "detectionToggle", enabled});
+				}
+
+				sendResponse({ok: true})
+			})();
+
+			return true;
+		}
+
+		case "setTrustSite": {
+			const hostname: string = message.hostname
+			const trusted: boolean = message.trusted
+
+			(async () => {
+				const settings = await getSettings();
+				const updated = trusted ? [...new Set([...settings.trustedSites, hostname])]
+					: settings.trustedSites.filter((h) => h !== hostname);
+
+				await setTrustedSites(updated);
+
+				// tell content script to stop when trusted/run again when untrusted
+				const tabId = message.tabId ?? (await getActiveTabId());
+				if (tabId !== undefined) {
+					await sendToTab(tabId, {type: "detectionToggle", enabled: !trusted});
+				}
+
+				sendResponse({ok: true});
+			})();
+
+			return true;
+		}
+
+		default:
+			return false;
 	}
 });

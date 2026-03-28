@@ -178,15 +178,20 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
 // --- Entry point ---
 
-chrome.storage.local.get(["detectionEnabled", "trustedSites"], (settings) => {
-    if (settings.detectionEnabled === false) {
-        console.debug("[suspicious-ui-detector] detection disabled, skipping");
-        return;
+// ask background if detection should run for the current hostname
+chrome.runtime.sendMessage(
+    {type: "contentReady", hostname: window.location.hostname},
+    (response) => {
+        if (chrome.runtime.lastError) {
+            console.error("[suspicious-ui-detector] contentReady handshake failed:",
+                chrome.runtime.lastError.message);
+            return;
+        }
+
+        if (response?.shouldRun) {
+            runDetection();
+        } else {
+            console.debug("[suspicious-ui-detector] background says skip detection for this page")
+        }
     }
-    const trusted: string[] = settings.trustedSites ?? [];
-    if (trusted.includes(window.location.hostname)) {
-        console.debug("[suspicious-ui-detector] site is trusted, skipping");
-        return;
-    }
-    runDetection();
-});
+);
