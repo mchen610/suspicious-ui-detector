@@ -74,3 +74,51 @@ export interface ClassificationResult {
     confidence: string;             // Ex. "low", "medium", "high"
     explanation?: string;           // optional brief SLM rationale
 }
+
+// Message Passing
+
+interface ClassifyMessageType {
+    type: "classify";
+    packets: EvidencePacket[];
+    url?: string;
+}
+
+interface StatusMessageType {
+    type: "getStatus";
+    tabId?: number;
+}
+
+interface ContentReadyMessageType {
+    type: "contentReady";
+    hostname: string;
+}
+
+interface SettingsMessageType {
+    type: "getSettings";
+}
+
+interface EnableDetectionMessageType {
+    type: "setDetectionEnabled";
+    enabled: boolean;
+    tabId?: number;
+}
+
+interface TrustMessageType {
+    type: "setTrustSite";
+    hostname: string;
+    trusted: boolean;
+    tabId?: number;
+}
+
+interface DetectionMessageType {
+    type: "getDetections";
+    tabId?: number;
+}
+
+export type BackgroundMessage =
+    | ClassifyMessageType | StatusMessageType | ContentReadyMessageType | SettingsMessageType
+    | EnableDetectionMessageType | TrustMessageType | DetectionMessageType
+
+export function unreachable(value: never): never {
+    throw new Error(`Unreachable: unexpected value ${JSON.stringify(value)}`);
+}
