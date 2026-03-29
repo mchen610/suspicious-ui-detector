@@ -1,6 +1,5 @@
 import { classifyPacketsWithInference, getStatusForTab } from "./llm";
-import { EvidencePacket } from "../shared/types";
-import setDefaultFontSize = chrome.fontSettings.setDefaultFontSize;
+import { EvidencePacket, BackgroundMessage, unreachable } from "../shared/types";
 
 interface ClassifyMessage {
 	type: "classify";
@@ -81,15 +80,16 @@ async function handleClassify({ packets, url }: ClassifyMessage, tabId?: number)
 
 // Central message router
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+	const message = msg as BackgroundMessage;
 	switch (message.type) {
 
 		// content script messages
 		case "contentReady": {
-			const hostname: string = message.hostname
+			const hostname: string = message.hostname;
 			getSettings().then((settings) => {
 				const shouldRun = settings.detectionEnabled && !settings.trustedSites.includes(hostname);
-				sendResponse({ shouldRun })
+				sendResponse({ shouldRun });
 			});
 
 			return true;
@@ -120,7 +120,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 			}
 
 			sendToTab(tabId, {type: "getDetections"}).then((response) => {
-				sendResponse({count: (response as any)?.count ?? 0})
+				sendResponse({count: (response as any)?.count ?? 0});
 			});
 
 			return true;
@@ -138,15 +138,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 					await sendToTab(tabId, {type: "detectionToggle", enabled});
 				}
 
-				sendResponse({ok: true})
+				sendResponse({ok: true});
 			})();
 
 			return true;
 		}
 
 		case "setTrustSite": {
-			const hostname: string = message.hostname
-			const trusted: boolean = message.trusted
+			const hostname: string = message.hostname;
+			const trusted: boolean = message.trusted;
 
 			(async () => {
 				const settings = await getSettings();
@@ -168,6 +168,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 		}
 
 		default:
+			unreachable(message);
 			return false;
 	}
 });
