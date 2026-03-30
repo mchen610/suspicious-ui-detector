@@ -6,7 +6,7 @@ type PipelineStatus =
 	| { stage: "idle" }
 	| { stage: "loading"; modelId: string; progress: number }
 	| { stage: "classifying"; total: number; done: number }
-	| { stage: "done"; flagged: number }; // flagged is populated by querying the content script
+	| { stage: "done"; flagged: number };
 
 function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange: (v: boolean) => void }) {
 	return (
@@ -39,15 +39,13 @@ function StatusLine({ status }: { status: PipelineStatus }) {
 				</span>
 			);
 		}
-		case "classifying": {
-			const remaining = status.total - status.done;
+		case "classifying":
 			return (
 				<span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-400">
 					<span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-pulse" />
-					{remaining} element{remaining !== 1 && "s"} remaining...
+					Processing {status.total} element{status.total !== 1 && "s"}...
 				</span>
 			);
-		}
 		case "done":
 			return status.flagged > 0 ? (
 				<span className="inline-flex items-center gap-1.5 text-xs font-medium text-red-600">
@@ -75,28 +73,13 @@ function App() {
 	const [detectionEnabled, setDetectionEnabled] = useState(true);
 	const [trustThisSite, setTrustThisSite] = useState(false);
 	const [currentHostname, setCurrentHostname] = useState<string | null>(null);
+	const [activeTabId, setActiveTabId] = useState<number | undefined>();
 	const [settingsLoaded, setSettingsLoaded] = useState(false);
 
 	useEffect(() => {
-		let activeTabId: number | undefined;
-
-		function queryFlaggedCount() {
-			if (activeTabId === undefined) return;
-			chrome.runtime.sendMessage({ type: "getDetections", tabId: activeTabId }, (response) => {
-				if (chrome.runtime.lastError) {
-					setStatus({ stage: "done", flagged: 0 });
-					return;
-				}
-				setStatus({ stage: "done", flagged: response?.count ?? 0 });
-			});
-		}
-
+		let tabId: number | undefined;
 		const listener = (message: { type: string; status: PipelineStatus; tabId?: number }) => {
-			if (message.type !== "statusUpdate") return;
-			if (message.tabId !== undefined && message.tabId !== activeTabId) return;
-			if (message.status.stage === "done") {
-				queryFlaggedCount();
-			} else {
+			if (message.type === "statusUpdate" && (message.tabId === undefined || message.tabId === tabId)) {
 				setStatus(message.status);
 			}
 		};
@@ -104,28 +87,42 @@ function App() {
 
 		chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
 			const tab = tabs[0];
-			activeTabId = tab?.id;
+			tabId = tab?.id;
+			setActiveTabId(tabId);
+
 			const hostname = tab?.url ? new URL(tab.url).hostname : null;
 			setCurrentHostname(hostname);
 
-			chrome.storage.local.get(["detectionEnabled", "trustedSites"], (result) => {
-				setDetectionEnabled(result["detectionEnabled"] !== false);
-				const trusted: string[] = result["trustedSites"] ?? [];
+			// get detection enabled and trusted site settings from the background
+			chrome.runtime.sendMessage({ type: "getSettings" }, (settings) => {
+				if (chrome.runtime.lastError) {
+					setSettingsLoaded(true);
+					return;
+				}
+
+				setDetectionEnabled(settings?.detectionEnabled !== false);
+				const trusted: string[] = settings?.trustedSites ?? [];
 				setTrustThisSite(hostname !== null && trusted.includes(hostname));
+
 				setSettingsLoaded(true);
 			});
 
-			// Get current status for this tab
-			if (activeTabId !== undefined) {
-				chrome.runtime.sendMessage({ type: "getStatus", tabId: activeTabId }, (response) => {
+			// get current pipeline status for this tab from the background
+			if (tabId !== undefined) {
+				chrome.runtime.sendMessage({ type: "getStatus", tabId: tabId }, (response) => {
 					if (!chrome.runtime.lastError && response && response.stage !== "idle") {
-						if (response.stage === "done") {
-							queryFlaggedCount();
-						} else {
-							setStatus(response);
-						}
-					} else {
-						queryFlaggedCount();
+						setStatus(response);
+					} else if (tabId !== undefined) {
+
+						// ask background to relay detection count query to the content script
+						chrome.runtime.sendMessage({ type: "getDetections", tabId }, (detResponse) => {
+							if (chrome.runtime.lastError) {
+								setStatus({ stage: "done", flagged: 0 });
+								return;
+							}
+
+							setStatus({ stage: "done", flagged: detResponse?.count ?? 0 });
+						});
 					}
 				});
 			}
@@ -136,27 +133,24 @@ function App() {
 
 	function handleDetectionEnabled(value: boolean) {
 		setDetectionEnabled(value);
-		chrome.storage.local.set({ detectionEnabled: value });
-		chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-			if (tabs[0]?.id) {
-				chrome.tabs.sendMessage(tabs[0].id, { type: "detectionToggle", enabled: value });
-			}
+
+		// tell background to set detection status
+		chrome.runtime.sendMessage({
+			type: "setDetectionEnabled",
+			value: value,
+			tabId: activeTabId,
 		});
 	}
 
 	function handleTrustThisSite(value: boolean) {
 		setTrustThisSite(value);
-		chrome.storage.local.get(["trustedSites"], (result) => {
-			const trusted: string[] = result["trustedSites"] ?? [];
-			const updated = value
-				? [...new Set([...trusted, currentHostname])]
-				: trusted.filter((h) => h !== currentHostname);
-			chrome.storage.local.set({ trustedSites: updated });
-		});
-		chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-			if (tabs[0]?.id) {
-				chrome.tabs.sendMessage(tabs[0].id, { type: "detectionToggle", enabled: !value });
-			}
+
+		// tell background to set currentHostname trusted site status
+		chrome.runtime.sendMessage({
+			type: "setTrustSite",
+			hostname: currentHostname,
+			trusted: value,
+			tabId: activeTabId,
 		});
 	}
 
