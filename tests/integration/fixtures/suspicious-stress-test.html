@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Test Fixture — Suspicious Stress Test (100 elements)</title>
+  <style>
+    body { margin: 0; font-family: sans-serif; padding: 24px; background: #f5f5f5; }
+    h1 { text-align: center; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+    .card { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 16px; }
+    .card h3 { margin: 0 0 8px; font-size: 14px; }
+    .card a, .card button {
+      display: inline-block; padding: 10px 20px; margin: 4px 0;
+      background: #4CAF50; color: white; text-decoration: none;
+      border: none; border-radius: 4px; font-size: 14px; cursor: pointer;
+      width: 100%; text-align: center; box-sizing: border-box;
+    }
+    .card a.danger { background: #f44336; }
+    .card a.warning { background: #FF9800; }
+  </style>
+</head>
+<body>
+<h1>Download SuperApp v5.0</h1>
+<p style="text-align:center;">Your file is ready for download.</p>
+<div class="grid" id="grid"></div>
+<script>
+  const templates = [
+    { tag: 'a', href: 'https://ad.example.com/track?click=1', text: 'Download Now', cls: 'danger' },
+    { tag: 'a', href: 'https://ad.example.com/track?click=2', text: 'Click Here to Download', cls: 'danger' },
+    { tag: 'a', href: 'https://adnetwork.example.com/redir', text: 'Start Download', cls: '' },
+    { tag: 'a', href: 'https://ad.example.com/offer', text: 'Your Download is Ready!', cls: 'warning' },
+    { tag: 'button', href: null, text: 'Download Free Update Now', cls: '' },
+    { tag: 'a', href: 'https://malware.example.com/installer.exe', text: 'UPDATE REQUIRED — Install Now', cls: 'danger' },
+    { tag: 'a', href: 'https://ad.example.com/vpn', text: 'Protect Your PC — Download VPN', cls: 'warning' },
+    { tag: 'a', href: 'https://ad.example.com/cleaner', text: 'Your Computer is Slow! Fix Now', cls: 'danger' },
+    { tag: 'a', href: 'https://ad.example.com/antivirus', text: 'WARNING: Virus Detected! Clean Now', cls: 'danger' },
+    { tag: 'button', href: null, text: 'Click Allow to Continue', cls: '' },
+  ];
+  const grid = document.getElementById('grid');
+  for (let i = 0; i < 100; i++) {
+    const t = templates[i % templates.length];
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.ad = '';
+    card.innerHTML = `<h3>Sponsored #${i + 1}</h3>`;
+    const el = document.createElement(t.tag);
+    el.textContent = t.text;
+    if (t.cls) el.className = t.cls;
+    if (t.href) el.setAttribute('href', t.href);
+    if (t.tag === 'button') el.setAttribute('onclick', 'void(0)');
+    card.appendChild(el);
+    grid.appendChild(card);
+  }
+</script>
+</body>
+</html>

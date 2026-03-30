@@ -32,7 +32,7 @@ export type PipelineStatus =
 	| { stage: "idle" }
 	| { stage: "loading"; modelId: string; progress: number }
 	| { stage: "classifying"; total: number; done: number }
-	| { stage: "done"; flagged: number };
+	| { stage: "done" };
 
 const tabStatus = new Map<number, PipelineStatus>();
 
@@ -98,12 +98,12 @@ async function classifyOne(eng: MLCEngineInterface, prompt: string): Promise<{ s
 	return { suspicious: lastWord === "SUSPICIOUS", raw };
 }
 
-export async function classifyPacketsWithInference(packets: EvidencePacket[], url?: string, tabId?: number): Promise<{ results: ClassificationResult[] }> {
+export async function classifyPacketsWithInference(packets: EvidencePacket[], url?: string, tabId?: number): Promise<void> {
 	const eng = await getEngine();
 
 	console.log(`[suspicious-ui-detector] classifying ${packets.length} packets from ${url}`);
 
-	const results: ClassificationResult[] = [];
+	let done = 0;
 	broadcastStatus({ stage: "classifying", total: packets.length, done: 0 }, tabId);
 
 	for (const pkt of packets) {
@@ -123,20 +123,22 @@ export async function classifyPacketsWithInference(packets: EvidencePacket[], ur
 
 		const explanation = raw.replace(/<think>[\s\S]*?<\/think>/g, "").trim() || undefined;
 
-		results.push({
+		const classification: ClassificationResult = {
 			id: pkt.id,
 			category: suspicious ? "suspicious" : "benign",
 			confidence: suspicious ? "medium" : "low",
 			explanation,
-		});
+		};
 
-		broadcastStatus({ stage: "classifying", total: packets.length, done: results.length }, tabId);
+		// Stream result to content script as soon as it's ready
+		if (tabId !== undefined) {
+			chrome.tabs.sendMessage(tabId, { type: "classificationResult", result: classification }).catch(() => {});
+		}
+
+		broadcastStatus({ stage: "classifying", total: packets.length, done: ++done }, tabId);
 	}
 
-	const flagged = results.filter(r => r.category !== "benign").length;
-	broadcastStatus({ stage: "done", flagged }, tabId);
-
-	return { results };
+	broadcastStatus({ stage: "done" }, tabId);
 }
 
 export const _testing = { buildPrompt, classifyOne, SYSTEM_PROMPT };

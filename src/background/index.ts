@@ -69,12 +69,10 @@ async function getActiveTabId(): Promise<number | undefined> {
 async function handleClassify({ packets, url }: ClassifyMessage, tabId?: number) {
 	console.log(`[suspicious-ui-detector] received ${packets.length} packets from ${url}`);
 	try {
-		const { results } = await classifyPacketsWithInference(packets, url, tabId);
-		console.log("[suspicious-ui-detector] classification complete:", results);
-		return { results };
+		await classifyPacketsWithInference(packets, url, tabId);
+		console.log("[suspicious-ui-detector] classification complete");
 	} catch (err) {
 		console.error("[suspicious-ui-detector] classify error:", err);
-		return { results: [] };
 	}
 }
 
