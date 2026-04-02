@@ -74,7 +74,7 @@ function buildPrompt(p: EvidencePacket, url?: string): string {
 		try { parts.push(`page=${new URL(url).hostname}`); }
 		catch { /* skip */ }
 	}
-	parts.push(`<${p.tagName}> ${p.HTMLSnippet.slice(0, 120)}`)
+	parts.push(`<${p.tagName}> ${p.HTMLSnippet.slice(0, 200)}`)
 
 	const href = p.attributes.href;
 	if (href) {
@@ -83,6 +83,12 @@ function buildPrompt(p: EvidencePacket, url?: string): string {
 			parts.push("sameOrigin=true");
 		}
 	}
+
+	const ariaLabel = p.attributes["aria-label"];
+	if (ariaLabel) parts.push(`ariaLabel=${ariaLabel.slice(0, 60)}`);
+
+	const title = p.attributes["title"];
+	if (title) parts.push(`title=${title.slice(0, 60)}`);
 
 	if (p.style.pos !== "static") parts.push(`pos=${p.style.pos}`);
 	if (p.isInIFrame) parts.push("iframe=true");
