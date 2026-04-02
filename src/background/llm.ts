@@ -77,7 +77,12 @@ function buildPrompt(p: EvidencePacket, url?: string): string {
 	parts.push(`<${p.tagName}> ${p.HTMLSnippet.slice(0, 120)}`)
 
 	const href = p.attributes.href;
-	if (href) parts.push(`href=${href.slice(0, 80)}`);
+	if (href) {
+		parts.push(`href=${href.slice(0, 150)}`);
+		if (url && isSameSite(href, url)) {
+			parts.push("sameOrigin=true");
+		}
+	}
 
 	if (p.style.pos !== "static") parts.push(`pos=${p.style.pos}`);
 	if (p.isInIFrame) parts.push("iframe=true");
@@ -86,6 +91,19 @@ function buildPrompt(p: EvidencePacket, url?: string): string {
 	if (elementText) parts.push(`elementText: ${elementText}`);
 
 	return parts.join("\n");
+}
+
+// NOTE: Fails on edge cases like 'example.co.uk' but covers majority of site domains
+function isSameSite(href: string, url: string): boolean {
+	try {
+		const hrefHost = new URL(href, url).hostname;
+		const pageHost = new URL(url).hostname;
+		const tld =
+			(host: string) => host.split('.').slice(-2).join('.');
+		return tld(hrefHost) == tld(pageHost);
+	} catch {
+		return false;
+	}
 }
 
 async function classifyOne(eng: MLCEngineInterface, prompt: string): Promise<{ suspicious: boolean; raw: string }> {
