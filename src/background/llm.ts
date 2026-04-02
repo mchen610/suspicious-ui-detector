@@ -68,8 +68,13 @@ export function getEngine(): Promise<MLCEngineInterface> {
 	return engineInitPromise;
 }
 
-function buildPrompt(p: EvidencePacket): string {
-	const parts = [`<${p.tagName}> ${p.HTMLSnippet.slice(0, 120)}`];
+function buildPrompt(p: EvidencePacket, url?: string): string {
+	const parts: string[] = [];
+	if (url) {
+		try { parts.push(`page=${new URL(url).hostname}`); }
+		catch { /* skip */ }
+	}
+	parts.push(`<${p.tagName}> ${p.HTMLSnippet.slice(0, 120)}`)
 
 	const href = p.attributes.href;
 	if (href) parts.push(`href=${href.slice(0, 80)}`);
@@ -107,7 +112,7 @@ export async function classifyPacketsWithInference(packets: EvidencePacket[], ur
 	broadcastStatus({ stage: "classifying", total: packets.length, done: 0 }, tabId);
 
 	for (const pkt of packets) {
-		const prompt = buildPrompt(pkt);
+		const prompt = buildPrompt(pkt, url);
 		let suspicious = false;
 		let raw = "";
 		try {
