@@ -213,6 +213,78 @@ function clearAllOverlays() {
 
 // --- Run detection ---
 
+function observeAdContainers() {
+    const containers = document.querySelectorAll<HTMLElement>(DEFAULT_CONFIG.adContainerSelectors);
+    if (containers.length === 0) return;
+
+    const observer = new MutationObserver((mutations) => {
+        const newCandidates: HTMLElement[] = [];
+
+        for (const mutation of mutations) {
+            for (const node of mutation.addedNodes) {
+                if (node.nodeType !== Node.ELEMENT_NODE) continue;
+
+                // check inserted node
+                const el = node as HTMLElement;
+                if (el.matches(DEFAULT_CONFIG.interactiveSelectors)) {
+                    newCandidates.push(el);
+                }
+
+                // check descendants of inserted node
+                for (const child of el.querySelectorAll<HTMLElement>(DEFAULT_CONFIG.interactiveSelectors)) {
+                    newCandidates.push(child);
+                }
+            }
+        }
+
+        if (newCandidates.length === 0) return;
+
+        console.debug(
+            `[suspicious-ui-detector] MutationObserver found ${newCandidates.length} new candidates`
+        );
+
+        const result = extractEvidence(newCandidates, DEFAULT_CONFIG);
+
+        // apply frame-specific ID offset
+        for (const pkt of result.packets) {
+            pkt.id += idOffset;
+        }
+
+        // merge new elements into existing element map
+        const startID = Math.max(...elementMap.keys(), -1) + 1;
+        const newMap = new Map(
+            newCandidates.map((e, i) => [startID + i, e])
+        );
+
+        for (const [id, el] of newMap) {
+            elementMap.set(id, el);
+        }
+
+        // resolve existing packet IDs
+        for (let i = 0; i < result.packets.length; i++) {
+            result.packets[i].id = startID + i;
+        }
+
+        // increase idOffset pass the new batch to avoid collisions
+        idOffset += newCandidates.length;
+
+        if (result.packets.length > 0) {
+            chrome.runtime.sendMessage(
+                { type: "classify", packets: result.packets, url: result.url },
+                () => void chrome.runtime.lastError,
+            );
+        }
+    });
+
+    for (const container of containers) {
+        observer.observe(container, { childList: true, subtree: true });
+    }
+
+    console.debug(
+        `[suspicious-ui-detector] observing ${containers.length} ad containers for late injection`
+    );
+}
+
 function runDetection() {
     const extractionResult = runPipeline();
 
@@ -227,6 +299,9 @@ function runDetection() {
             () => void chrome.runtime.lastError,
         );
     }
+
+    // start watching for late injected ad content
+    observeAdContainers();
 }
 
 if (window !== window.top && SAFE_IFRAME_HOSTS.has(window.location.hostname)) {
