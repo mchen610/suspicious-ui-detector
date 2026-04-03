@@ -100,8 +100,9 @@ function buildPrompt(p: EvidencePacket, url?: string): string {
 	if (p.style.pos !== "static") parts.push(`pos=${p.style.pos}`);
 	if (p.isInIFrame) parts.push("iframe=true");
 
-	const elementText = p.elementText?.slice(0, 60);
-	if (elementText) parts.push(`elementText: ${elementText}`);
+	// aggressively cap (3 text fragments, 120 total characters)
+	const ctx = p.surroundingText?.filter(Boolean).slice(0, 3).join(" | ").slice(0, 120);
+	if (ctx) parts.push(`context: ${ctx}`)
 
 	return parts.join("\n");
 }
