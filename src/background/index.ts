@@ -1,6 +1,10 @@
 import { classifyPacketsWithInference, getStatusForTab } from "./llm";
 import { EvidencePacket, BackgroundMessage, unreachable } from "../shared/types";
 
+
+let nextFrameBlock = 10000;
+const FRAME_BLOCK_SIZE = 10000;
+
 interface ClassifyMessage {
 	type: "classify";
 	packets: EvidencePacket[];
@@ -87,7 +91,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 			const hostname: string = message.hostname;
 			getSettings().then((settings) => {
 				const shouldRun = settings.detectionEnabled && !settings.trustedSites.includes(hostname);
-				sendResponse({ shouldRun });
+
+				let idOffset = 0;
+				if (sender.frameId !== 0) {
+					idOffset = nextFrameBlock;
+					nextFrameBlock += FRAME_BLOCK_SIZE;
+				}
+				sendResponse({ shouldRun, idOffset });
 			});
 
 			return true;

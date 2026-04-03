@@ -29,9 +29,9 @@ export function extractEvidence(
     };
 }
 
-export function buildElementMap(candidates: HTMLElement[]): Map<number, HTMLElement> {
+export function buildElementMap(candidates: HTMLElement[], offset: number = 0): Map<number, HTMLElement> {
     return new Map(candidates.map(
-        (elem, i) => [i, elem])
+        (elem, i) => [i + offset, elem])
     );
 }
 

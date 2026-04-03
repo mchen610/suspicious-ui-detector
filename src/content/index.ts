@@ -27,6 +27,9 @@ const SAFE_IFRAME_HOSTS = new Set([
     // add other common embed providers as needed
 ])
 
+// frame-specific ID offset (top-level = 0, subframes > 0)
+let idOffset = 0;
+
 // maps packet IDs to DOM elements
 let elementMap = new Map<number, HTMLElement>();
 
@@ -162,7 +165,11 @@ function runPipeline(): ExtractionResult {
     const candidates = discoverCandidates(document, DEFAULT_CONFIG);
     const result = extractEvidence(candidates, DEFAULT_CONFIG);
 
-    elementMap = buildElementMap(candidates);
+    for (const pkt of result.packets) {
+        pkt.id += idOffset;
+    }
+
+    elementMap = buildElementMap(candidates, idOffset);
 
     return result;
 }
@@ -278,6 +285,7 @@ if (window !== window.top && SAFE_IFRAME_HOSTS.has(window.location.hostname)) {
             }
 
             if (response?.shouldRun) {
+                idOffset = response.idOffset ?? 0;
                 runDetection();
             } else {
                 console.debug("[suspicious-ui-detector] background says skip detection for this page")

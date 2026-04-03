@@ -140,6 +140,9 @@ export async function classifyPacketsWithInference(packets: EvidencePacket[], ur
 
 	console.log(`[suspicious-ui-detector] classifying ${packets.length} packets from ${url}`);
 
+	const hostname = url
+		? (() => { try { return new URL(url).hostname; } catch { return url; } })() : "unknown";
+
 	let done = 0;
 	broadcastStatus({ stage: "classifying", total: packets.length, done: 0 }, tabId);
 
@@ -156,9 +159,15 @@ export async function classifyPacketsWithInference(packets: EvidencePacket[], ur
 			raw = String(err);
 		}
 
-		console.log(`[suspicious-ui-detector] #${pkt.id} <${pkt.tagName}> → ${suspicious ? "SUSPICIOUS" : "SAFE"}\nprompt:\n${prompt}\nresponse:\n${raw.trim()}`);
+		// console.log(`[suspicious-ui-detector] #${pkt.id} <${pkt.tagName}> → ${suspicious ? "SUSPICIOUS" : "SAFE"}\nprompt:\n${prompt}\nresponse:\n${raw.trim()}`);
 
 		const explanation = raw.replace(/<think>[\s\S]*?<\/think>/g, "").trim() || undefined;
+
+		console.log(
+			`[suspicious-ui-detector] #${pkt.id} <${pkt.tagName}> [${hostname}] → ${suspicious ? "SUSPICIOUS" : "SAFE"}` +
+			`\nprompt:\n${prompt}` +
+			`\nresponse:\n${explanation ?? "(empty)"}`
+		);
 
 		const classification: ClassificationResult = {
 			id: pkt.id,
