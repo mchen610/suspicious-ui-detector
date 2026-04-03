@@ -45,6 +45,8 @@ export function discoverCandidates(
             curr = curr.parentElement;
         }
 
+        if (isNavigationLink(elem)) return false;
+
         const style = getComputedStyle(elem)
         if (style.display === "none" || style.visibility === "hidden") return false;
 
@@ -114,4 +116,30 @@ export function discoverCandidates(
     }
 
     return candidates;
+}
+
+/**
+ * Helper that returns true if 'elem' is a same origin link inside a
+ * navigation tag (<nav>, <header>, role="navigation").
+ */
+function isNavigationLink(elem: HTMLElement): boolean {
+    if (elem.tagName.toLowerCase() !== "a") return false;
+
+    const href = elem.getAttribute("href");
+    if (!href) return false;
+
+    // check if same origin
+    try {
+        const linkHost = new URL(href, window.location.href).hostname;
+        const pageHost = window.location.hostname;
+
+        const rootDomain = (host: string) =>
+            host.split(".").slice(-2).join(".");
+        if (rootDomain(linkHost) !== rootDomain(pageHost)) return false;
+    } catch {
+        return false;
+    }
+
+    // check if inside a navigation tag
+    return elem.closest("nav, header, [role='navigation']") !== null;
 }
