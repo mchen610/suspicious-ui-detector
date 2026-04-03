@@ -304,74 +304,80 @@ function runDetection() {
     observeAdContainers();
 }
 
-if (window !== window.top && SAFE_IFRAME_HOSTS.has(window.location.hostname)) {
-    console.debug("[suspicious-ui-detector] skipping safe embed iframe")
-    // skip detection for safe iframe hosts
+if ((window as any).__suspiciousUiDetectorRan) {
+    console.debug("[suspicious-ui-detector] skipping duplicate run in frame");
 } else {
-    // --- Init ---
+    (window as any).__suspiciousUiDetectorRan = true;
 
-    injectStyles();
-    window.addEventListener("scroll", repositionAllOverlays, { passive: true });
-    window.addEventListener("resize", repositionAllOverlays, { passive: true });
+    if (window !== window.top && SAFE_IFRAME_HOSTS.has(window.location.hostname)) {
+        console.debug("[suspicious-ui-detector] skipping safe embed iframe")
+        // skip detection for safe iframe hosts
+    } else {
+        // --- Init ---
 
-    chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-        // listen for toggle messages from the background worker
-        if (message.type === "classificationResult") {
-            handleClassifications([message.result]);
-        } else if (message.type === "detectionToggle") {
-            if (message.enabled) {
-                runDetection();
-            } else {
-                clearAllOverlays();
+        injectStyles();
+        window.addEventListener("scroll", repositionAllOverlays, { passive: true });
+        window.addEventListener("resize", repositionAllOverlays, { passive: true });
+
+        chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+            // listen for toggle messages from the background worker
+            if (message.type === "classificationResult") {
+                handleClassifications([message.result]);
+            } else if (message.type === "detectionToggle") {
+                if (message.enabled) {
+                    runDetection();
+                } else {
+                    clearAllOverlays();
+                }
+            } else if (message.type === "getDetections") {
+                sendResponse({ count: flaggedElements.size });
             }
-        } else if (message.type === "getDetections") {
-            sendResponse({ count: flaggedElements.size });
-        }
 
-        // listen for relayed iframe flag messages from the background worker
-        if (message.type === "iframeFlagRelay") {
-            if (window !== window.top) return
+            // listen for relayed iframe flag messages from the background worker
+            if (message.type === "iframeFlagRelay") {
+                if (window !== window.top) return
 
-            const sourceHost = safeHostname(message.sourceURL)
-            if (!sourceHost) return;
+                const sourceHost = safeHostname(message.sourceURL)
+                if (!sourceHost) return;
 
-            const iframes = document.querySelectorAll("iframe");
-            for (const iframe of iframes) {
-                const iframeHost = safeHostname(iframe.src)
-                if (iframeHost && iframeHost == sourceHost) {
-                    const id = 10000 + Array.from(iframes).indexOf(iframe);
-                    highlightElement(id, iframe, message.explanation);
-                    break;
+                const iframes = document.querySelectorAll("iframe");
+                for (const iframe of iframes) {
+                    const iframeHost = safeHostname(iframe.src)
+                    if (iframeHost && iframeHost == sourceHost) {
+                        const id = 10000 + Array.from(iframes).indexOf(iframe);
+                        highlightElement(id, iframe, message.explanation);
+                        break;
+                    }
                 }
             }
-        }
-    });
+        });
 
-    // --- Entry point ---
+        // --- Entry point ---
 
-    // ask background if detection should run for the current hostname
-    chrome.runtime.sendMessage(
-        {type: "contentReady", hostname: window.location.hostname},
-        (response) => {
-            if (chrome.runtime.lastError) {
-                console.error("[suspicious-ui-detector] contentReady handshake failed:",
-                    chrome.runtime.lastError.message);
-                return;
+        // ask background if detection should run for the current hostname
+        chrome.runtime.sendMessage(
+            {type: "contentReady", hostname: window.location.hostname},
+            (response) => {
+                if (chrome.runtime.lastError) {
+                    console.error("[suspicious-ui-detector] contentReady handshake failed:",
+                        chrome.runtime.lastError.message);
+                    return;
+                }
+
+                if (response?.shouldRun) {
+                    idOffset = response.idOffset ?? 0;
+                    runDetection();
+                } else {
+                    console.debug("[suspicious-ui-detector] background says skip detection for this page")
+                }
             }
+        );
+    }
 
-            if (response?.shouldRun) {
-                idOffset = response.idOffset ?? 0;
-                runDetection();
-            } else {
-                console.debug("[suspicious-ui-detector] background says skip detection for this page")
-            }
-        }
-    );
-}
-
-/** Helper that extracts domain from url */
-function safeHostname(url?: string): string | null {
-    if (!url) return null;
-    try { return new URL(url).hostname; }
-    catch { return null;}
+    /** Helper that extracts domain from url */
+    function safeHostname(url?: string): string | null {
+        if (!url) return null;
+        try { return new URL(url).hostname; }
+        catch { return null;}
+    }
 }

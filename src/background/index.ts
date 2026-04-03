@@ -104,6 +104,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 		}
 
 		case "classify": {
+
+
 			handleClassify(message as ClassifyMessage, sender.tab?.id).then(sendResponse);
 			return true;
 		}
