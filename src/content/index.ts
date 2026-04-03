@@ -18,6 +18,15 @@ import { DEFAULT_CONFIG } from "./config";
 import styles from "./highlight.css?inline";
 
 
+const SAFE_IFRAME_HOSTS = new Set([
+    "www.youtube.com",
+    "youtube.com",
+    "player.vimeo.com",
+    "platform.twitter.com",
+    "www.instagram.com",
+    // add other common embed providers as needed
+])
+
 // maps packet IDs to DOM elements
 let elementMap = new Map<number, HTMLElement>();
 
@@ -149,43 +158,48 @@ function runDetection() {
     }
 }
 
-// --- Init ---
+if (window !== window.top && SAFE_IFRAME_HOSTS.has(window.location.hostname)) {
+    console.debug("[suspicious-ui-detector] skipping safe embed iframe")
+    // skip detection for safe iframe hosts
+} else {
+    // --- Init ---
 
-injectStyles();
-window.addEventListener("scroll", repositionAllOverlays, { passive: true });
-window.addEventListener("resize", repositionAllOverlays, { passive: true });
+    injectStyles();
+    window.addEventListener("scroll", repositionAllOverlays, { passive: true });
+    window.addEventListener("resize", repositionAllOverlays, { passive: true });
 
-// Listen for toggle messages from the popup
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-    if (message.type === "classificationResult") {
-        handleClassifications([message.result]);
-    } else if (message.type === "detectionToggle") {
-        if (message.enabled) {
-            runDetection();
-        } else {
-            clearAllOverlays();
+    // Listen for toggle messages from the popup
+        chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+            if (message.type === "classificationResult") {
+                handleClassifications([message.result]);
+            } else if (message.type === "detectionToggle") {
+                if (message.enabled) {
+                    runDetection();
+                } else {
+                    clearAllOverlays();
+                }
+            } else if (message.type === "getDetections") {
+                sendResponse({ count: flaggedElements.size });
+            }
+        });
+
+    // --- Entry point ---
+
+    // ask background if detection should run for the current hostname
+    chrome.runtime.sendMessage(
+        {type: "contentReady", hostname: window.location.hostname},
+        (response) => {
+            if (chrome.runtime.lastError) {
+                console.error("[suspicious-ui-detector] contentReady handshake failed:",
+                    chrome.runtime.lastError.message);
+                return;
+            }
+
+            if (response?.shouldRun) {
+                runDetection();
+            } else {
+                console.debug("[suspicious-ui-detector] background says skip detection for this page")
+            }
         }
-    } else if (message.type === "getDetections") {
-        sendResponse({ count: flaggedElements.size });
-    }
-});
-
-// --- Entry point ---
-
-// ask background if detection should run for the current hostname
-chrome.runtime.sendMessage(
-    {type: "contentReady", hostname: window.location.hostname},
-    (response) => {
-        if (chrome.runtime.lastError) {
-            console.error("[suspicious-ui-detector] contentReady handshake failed:",
-                chrome.runtime.lastError.message);
-            return;
-        }
-
-        if (response?.shouldRun) {
-            runDetection();
-        } else {
-            console.debug("[suspicious-ui-detector] background says skip detection for this page")
-        }
-    }
-);
+    );
+}
