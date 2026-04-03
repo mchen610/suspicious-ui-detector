@@ -98,6 +98,25 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 			return true;
 		}
 
+		case "iframeFlag": {
+			const tabId = sender.tab?.id;
+
+			if (tabId !== undefined) {
+				// relay to top-level document
+				chrome.tabs.sendMessage(
+					tabId,
+					{
+						type: "iframeFlagRelay",
+						explanation: message.explanation,
+						sourceURL: sender.url,
+					},
+					{ frameId: 0 }
+				);
+			}
+
+			return false;
+		}
+
 		// popup messages
 		case "getSettings": {
 			getSettings().then((settings) => sendResponse(settings));
