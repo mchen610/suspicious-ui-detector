@@ -3,7 +3,8 @@ import { EvidencePacket, ClassificationResult } from "../shared/types";
 
 export const MODEL_ID = "Qwen3-4B-q4f16_1-MLC";
 
-const SYSTEM_PROMPT = `You classify web UI elements as SUSPICIOUS or SAFE.
+const SYSTEM_PROMPT =
+`You classify web UI elements as SUSPICIOUS or SAFE.
 
 SUSPICIOUS means the element tries to TRICK the user. When uncertain, choose SAFE.
 
@@ -16,7 +17,13 @@ SUSPICIOUS — any element that deceives:
 
 SAFE — everything else, including:
 - Legitimate download links (href points to an actual file like .apk, .exe, .zip)
+- Links where href domain matches the page domain (first-party navigation, downloads, upsells)
+- Links to well-known app stores (play.google.com, apps.apple.com)
+- FAQ/help/support links (href contains /faq, /help, /support, or element text is a help icon like [?])
+- Software suggestion links on file hosting sites ("Open with...", "Can be opened with...")
+- First-party premium upsells ("Try Ultra", "Go Pro", "Upgrade", "Download Faster")
 - Normal buttons and links (Subscribe, Sign up, Learn more)
+- A site's own download button (href subdomain matches page domain, e.g., download.example.com on example.com)
 - Ad container wrapper elements (div, ins, iframe) that do NOT themselves contain deceptive text
 - Standard ad labels ("Advertisement", "Sponsored")
 - onclick, alert(), analytics, UI toggles
