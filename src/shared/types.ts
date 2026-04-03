@@ -23,9 +23,9 @@ export interface EvidencePacket {
     style: StyleData;
     position: PositionData;
     styleAncestry: AncestorStyleEntry[];
-    // elementText: string;
     surroundingText: string[];
     isInIFrame: boolean;
+    isInAdContainer: boolean;
 }
 
 /** Subset of computed style properties relevant to deceptive UI detection. */

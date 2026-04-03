@@ -11,6 +11,7 @@ SUSPICIOUS means the element tries to TRICK the user. When uncertain, choose SAF
 SUSPICIOUS — any element that deceives:
 - Links/buttons that say "Download" but href goes to an ad network or unrelated domain
 - Text like "Your file is ready", "Update required", "Your computer is infected"
+- An iframe or element inside a known ad container (adContainer=true) on a file-hosting or download page, regardless of whether it is labeled "Advertisement" — the ad is positioned to visually interfere with the user's intended action
 - Fake system dialogs, fake antivirus warnings, fake browser notifications
 - "Click Allow to continue", "Enable notifications to verify"
 - An ad that disguises itself as a download button or system message
@@ -24,8 +25,7 @@ SAFE — everything else, including:
 - First-party premium upsells ("Try Ultra", "Go Pro", "Upgrade", "Download Faster")
 - Normal buttons and links (Subscribe, Sign up, Learn more)
 - A site's own download button (href subdomain matches page domain, e.g., download.example.com on example.com)
-- Ad container wrapper elements (div, ins, iframe) that do NOT themselves contain deceptive text
-- Standard ad labels ("Advertisement", "Sponsored")
+- Ad container wrapper elements (div, ins) that are empty or contain only standard ad labels, on pages where they do NOT overlap with a primary user action (e.g., a download button)- Standard ad labels ("Advertisement", "Sponsored")
 - onclick, alert(), analytics, UI toggles
 
 Key rule: if an element says "Download" but its href goes to an ad network (not a real file), it is SUSPICIOUS. The fact that it is inside an ad does NOT make it safe.
@@ -99,6 +99,7 @@ function buildPrompt(p: EvidencePacket, url?: string): string {
 
 	if (p.style.pos !== "static") parts.push(`pos=${p.style.pos}`);
 	if (p.isInIFrame) parts.push("iframe=true");
+	if (p.isInAdContainer) parts.push("adContainer=true");
 
 	// aggressively cap (3 text fragments, 120 total characters)
 	const ctx = p.surroundingText?.filter(Boolean).slice(0, 3).join(" | ").slice(0, 120);
