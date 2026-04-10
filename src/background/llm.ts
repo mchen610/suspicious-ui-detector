@@ -3,7 +3,8 @@ import { EvidencePacket, ClassificationResult } from "../shared/types";
 
 export const MODEL_ID = "Qwen3-4B-q4f16_1-MLC";
 
-const SYSTEM_PROMPT = `You classify web UI elements as SUSPICIOUS or SAFE.
+const SYSTEM_PROMPT =
+`You classify web UI elements as SUSPICIOUS or SAFE.
 
 SUSPICIOUS means the element tries to TRICK the user. When uncertain, choose SAFE.
 
@@ -16,7 +17,13 @@ SUSPICIOUS — any element that deceives:
 
 SAFE — everything else, including:
 - Legitimate download links (href points to an actual file like .apk, .exe, .zip)
+- Links where href domain matches the page domain (first-party navigation, downloads, upsells)
+- Links to well-known app stores (play.google.com, apps.apple.com)
+- FAQ/help/support links (href contains /faq, /help, /support, or element text is a help icon like [?])
+- Software suggestion links on file hosting sites ("Open with...", "Can be opened with...")
+- First-party premium upsells ("Try Ultra", "Go Pro", "Upgrade", "Download Faster")
 - Normal buttons and links (Subscribe, Sign up, Learn more)
+- A site's own download button (href subdomain matches page domain, e.g., download.example.com on example.com)
 - Ad container wrapper elements (div, ins, iframe) that do NOT themselves contain deceptive text
 - Standard ad labels ("Advertisement", "Sponsored")
 - onclick, alert(), analytics, UI toggles
@@ -68,19 +75,49 @@ export function getEngine(): Promise<MLCEngineInterface> {
 	return engineInitPromise;
 }
 
-function buildPrompt(p: EvidencePacket): string {
-	const parts = [`<${p.tagName}> ${p.HTMLSnippet.slice(0, 120)}`];
+function buildPrompt(p: EvidencePacket, url?: string): string {
+	const parts: string[] = [];
+	if (url) {
+		try { parts.push(`page=${new URL(url).hostname}`); }
+		catch { /* skip */ }
+	}
+	parts.push(`<${p.tagName}> ${p.HTMLSnippet.slice(0, 200)}`)
 
 	const href = p.attributes.href;
-	if (href) parts.push(`href=${href.slice(0, 80)}`);
+	if (href) {
+		parts.push(`href=${href.slice(0, 150)}`);
+		if (url && isSameSite(href, url)) {
+			parts.push("sameOrigin=true");
+		}
+	}
+
+	const ariaLabel = p.attributes["aria-label"];
+	if (ariaLabel) parts.push(`ariaLabel=${ariaLabel.slice(0, 60)}`);
+
+	const title = p.attributes["title"];
+	if (title) parts.push(`title=${title.slice(0, 60)}`);
 
 	if (p.style.pos !== "static") parts.push(`pos=${p.style.pos}`);
 	if (p.isInIFrame) parts.push("iframe=true");
 
-	const elementText = p.elementText?.slice(0, 60);
-	if (elementText) parts.push(`elementText: ${elementText}`);
+	// aggressively cap (3 text fragments, 120 total characters)
+	const ctx = p.surroundingText?.filter(Boolean).slice(0, 3).join(" | ").slice(0, 120);
+	if (ctx) parts.push(`context: ${ctx}`)
 
 	return parts.join("\n");
+}
+
+// NOTE: Fails on edge cases like 'example.co.uk' but covers majority of site domains
+function isSameSite(href: string, url: string): boolean {
+	try {
+		const hrefHost = new URL(href, url).hostname;
+		const pageHost = new URL(url).hostname;
+		const tld =
+			(host: string) => host.split('.').slice(-2).join('.');
+		return tld(hrefHost) == tld(pageHost);
+	} catch {
+		return false;
+	}
 }
 
 async function classifyOne(eng: MLCEngineInterface, prompt: string): Promise<{ suspicious: boolean; raw: string }> {
@@ -107,7 +144,7 @@ export async function classifyPacketsWithInference(packets: EvidencePacket[], ur
 	broadcastStatus({ stage: "classifying", total: packets.length, done: 0 }, tabId);
 
 	for (const pkt of packets) {
-		const prompt = buildPrompt(pkt);
+		const prompt = buildPrompt(pkt, url);
 		let suspicious = false;
 		let raw = "";
 		try {

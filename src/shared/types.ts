@@ -23,7 +23,8 @@ export interface EvidencePacket {
     style: StyleData;
     position: PositionData;
     styleAncestry: AncestorStyleEntry[];
-    elementText: string;
+    // elementText: string;
+    surroundingText: string[];
     isInIFrame: boolean;
 }
 
