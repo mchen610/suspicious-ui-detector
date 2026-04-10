@@ -23,9 +23,9 @@ export interface EvidencePacket {
     style: StyleData;
     position: PositionData;
     styleAncestry: AncestorStyleEntry[];
-    // elementText: string;
     surroundingText: string[];
     isInIFrame: boolean;
+    isInAdContainer: boolean;
 }
 
 /** Subset of computed style properties relevant to deceptive UI detection. */
@@ -116,9 +116,14 @@ interface DetectionMessageType {
     tabId?: number;
 }
 
+interface IframeFlagMessageType {
+    type: "iframeFlag";
+    explanation?: string;
+}
+
 export type BackgroundMessage =
     | ClassifyMessageType | StatusMessageType | ContentReadyMessageType | SettingsMessageType
-    | EnableDetectionMessageType | TrustMessageType | DetectionMessageType
+    | EnableDetectionMessageType | TrustMessageType | DetectionMessageType | IframeFlagMessageType
 
 export function unreachable(value: never): never {
     throw new Error(`Unreachable: unexpected value ${JSON.stringify(value)}`);

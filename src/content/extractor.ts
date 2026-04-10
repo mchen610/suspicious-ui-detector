@@ -29,9 +29,9 @@ export function extractEvidence(
     };
 }
 
-export function buildElementMap(candidates: HTMLElement[]): Map<number, HTMLElement> {
+export function buildElementMap(candidates: HTMLElement[], offset: number = 0): Map<number, HTMLElement> {
     return new Map(candidates.map(
-        (elem, i) => [i, elem])
+        (elem, i) => [i + offset, elem])
     );
 }
 
@@ -48,9 +48,10 @@ function buildPacket(
         style: extractStyle(elem),
         position: extractPosition(elem),
         styleAncestry: extractStyleAncestry(elem, config),
-        // elementText: (elem.textContent || "").trim().slice(0, config.maxSurroundingTextLength),
         surroundingText: extractSurroundingText(elem, config),
         isInIFrame: window !== window.top,
+        isInAdContainer: elem.closest(config.adContainerSelectors) !== null
+            || elem.matches(config.adContainerSelectors),
     };
 }
 
