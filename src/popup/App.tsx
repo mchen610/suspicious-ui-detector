@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { MODEL_GROUPS, DEFAULT_MODEL_ID, suggestModelId } from "../shared/models";
 import "./index.css";
 
 type PipelineStatus =
@@ -7,6 +8,18 @@ type PipelineStatus =
 	| { stage: "loading"; modelId: string; progress: number }
 	| { stage: "classifying"; total: number; done: number }
 	| { stage: "done"; flagged: number };
+
+async function getMaxBufferSizeMB(): Promise<number> {
+	try {
+		const gpu = (navigator as any).gpu;
+		if (!gpu) return 0;
+		const adapter = await gpu.requestAdapter();
+		if (!adapter) return 0;
+		return adapter.limits.maxBufferSize / (1024 * 1024);
+	} catch {
+		return 0;
+	}
+}
 
 function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange: (v: boolean) => void }) {
 	return (
@@ -75,8 +88,11 @@ function App() {
 	const [currentHostname, setCurrentHostname] = useState<string | null>(null);
 	const [activeTabId, setActiveTabId] = useState<number | undefined>();
 	const [settingsLoaded, setSettingsLoaded] = useState(false);
+	const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL_ID);
 
 	useEffect(() => {
+		const gpuProbe = getMaxBufferSizeMB();
+
 		let tabId: number | undefined;
 		const listener = (message: { type: string; status: PipelineStatus; tabId?: number }) => {
 			if (message.type === "statusUpdate" && (message.tabId === undefined || message.tabId === tabId)) {
@@ -104,7 +120,17 @@ function App() {
 				const trusted: string[] = settings?.trustedSites ?? [];
 				setTrustThisSite(hostname !== null && trusted.includes(hostname));
 
-				setSettingsLoaded(true);
+				gpuProbe.then(maxBufferMB => {
+					if (settings?.modelId) {
+						setSelectedModel(settings.modelId);
+					} else {
+						const pick = maxBufferMB > 0 ? suggestModelId(maxBufferMB) : DEFAULT_MODEL_ID;
+						setSelectedModel(pick);
+						chrome.runtime.sendMessage({ type: "setModel", modelId: pick });
+					}
+
+					setSettingsLoaded(true);
+				});
 			});
 
 			// get current pipeline status for this tab from the background
@@ -142,6 +168,11 @@ function App() {
 		});
 	}
 
+	function handleModelChange(modelId: string) {
+		setSelectedModel(modelId);
+		chrome.runtime.sendMessage({ type: "setModel", modelId });
+	}
+
 	function handleTrustThisSite(value: boolean) {
 		setTrustThisSite(value);
 
@@ -157,7 +188,7 @@ function App() {
 	return (
 		<div className="w-[280px] bg-white font-sans">
 			<div className="px-4 py-3 border-b border-gray-100">
-				<h1 className="text-sm font-semibold text-gray-900">Suspicious UI Detector</h1>
+				<h1 className="text-xs font-bold text-gray-500 tracking-wide uppercase">Suspicious UI Detector</h1>
 			</div>
 
 			<div className="px-4 py-3 border-b border-gray-100">
@@ -166,6 +197,24 @@ function App() {
 
 			{settingsLoaded && (
 				<div className="px-4 py-2.5 flex flex-col gap-2.5">
+					<label className="flex flex-col gap-1">
+						<span className="text-sm text-gray-600">Model</span>
+						<select
+							value={selectedModel}
+							onChange={(e) => handleModelChange(e.target.value)}
+							className="text-xs bg-white border border-gray-200 rounded px-2 py-1.5 text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
+						>
+							{MODEL_GROUPS.map((group) => (
+								<optgroup key={group.label} label={group.label}>
+									{group.models.map((m) => (
+										<option key={m.id} value={m.id}>
+											{m.name} — {(m.vramMB / 1024).toFixed(1)} GB{m.id.startsWith("Qwen3-") ? " (recommended)" : ""}
+										</option>
+									))}
+								</optgroup>
+							))}
+						</select>
+					</label>
 					<Toggle label="Enable detection" on={detectionEnabled} onChange={handleDetectionEnabled} />
 					<Toggle label="Trust this site" on={trustThisSite} onChange={handleTrustThisSite} />
 				</div>
