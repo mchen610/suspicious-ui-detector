@@ -121,9 +121,15 @@ interface IframeFlagMessageType {
     explanation?: string;
 }
 
+interface SetModelMessageType {
+    type: "setModel";
+    modelId: string;
+}
+
 export type BackgroundMessage =
     | ClassifyMessageType | StatusMessageType | ContentReadyMessageType | SettingsMessageType
     | EnableDetectionMessageType | TrustMessageType | DetectionMessageType | IframeFlagMessageType
+    | SetModelMessageType
 
 export function unreachable(value: never): never {
     throw new Error(`Unreachable: unexpected value ${JSON.stringify(value)}`);

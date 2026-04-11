@@ -1,5 +1,6 @@
-import { classifyPacketsWithInference, getStatusForTab } from "./llm";
+import { classifyPacketsWithInference, getStatusForTab, setModelId } from "./llm";
 import { EvidencePacket, BackgroundMessage, unreachable } from "../shared/types";
+import { DEFAULT_MODEL_ID } from "../shared/models";
 
 
 let nextFrameBlock = 10000;
@@ -23,12 +24,13 @@ chrome.runtime.onStartup.addListener(() => {
 
 // Storage helpers
 
-async function getSettings(): Promise<{ detectionEnabled: boolean, trustedSites: string[] }> {
+async function getSettings(): Promise<{ detectionEnabled: boolean, trustedSites: string[], modelId: string }> {
 	return new Promise((resolve) => {
-		chrome.storage.local.get(["detectionEnabled", "trustedSites"], (result) => {
+		chrome.storage.local.get(["detectionEnabled", "trustedSites", "modelId"], (result) => {
 			resolve({
 				detectionEnabled: result["detectionEnabled"] !== false,
 				trustedSites: result["trustedSites"] ?? [],
+				modelId: result["modelId"] || DEFAULT_MODEL_ID,
 			});
 		});
 	});
@@ -193,6 +195,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 				sendResponse({ok: true});
 			})();
 
+			return true;
+		}
+
+		case "setModel": {
+			const modelId: string = message.modelId;
+			chrome.storage.local.set({ modelId });
+			setModelId(modelId).then(() => sendResponse({ ok: true }));
 			return true;
 		}
 

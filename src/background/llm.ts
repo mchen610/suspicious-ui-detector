@@ -1,7 +1,6 @@
 import { CreateMLCEngine, MLCEngineInterface } from "@mlc-ai/web-llm";
 import { EvidencePacket, ClassificationResult } from "../shared/types";
-
-export const MODEL_ID = "Qwen3-4B-q4f16_1-MLC";
+import { DEFAULT_MODEL_ID } from "../shared/models";
 
 const SYSTEM_PROMPT =
 `You classify web UI elements as SUSPICIOUS or SAFE.
@@ -32,8 +31,26 @@ Key rule: if an element says "Download" but its href goes to an ad network (not 
 
 Think step-by-step in 1-2 plain sentences first. No markdown, no bullet points, no formatting. Then, your very last word MUST be either SUSPICIOUS or SAFE. Nothing else may come after it. If your last word is anything other than SUSPICIOUS or SAFE, your output is invalid.`;
 
+let currentModelId = DEFAULT_MODEL_ID;
 let engine: MLCEngineInterface | null = null;
 let engineInitPromise: Promise<MLCEngineInterface> | null = null;
+
+const modelIdReady = new Promise<void>((resolve) => {
+	chrome.storage.local.get(["modelId"], (result) => {
+		if (result.modelId) currentModelId = result.modelId;
+		resolve();
+	});
+});
+
+export async function setModelId(newId: string): Promise<void> {
+	currentModelId = newId;
+	const oldEngine = engine;
+	engine = null;
+	engineInitPromise = null;
+	if (oldEngine) {
+		try { await oldEngine.unload(); } catch { /* ignore */ }
+	}
+}
 
 export type PipelineStatus =
 	| { stage: "idle" }
@@ -52,15 +69,16 @@ export function getStatusForTab(tabId: number): PipelineStatus {
 	return tabStatus.get(tabId) ?? { stage: "idle" };
 }
 
-export function getEngine(): Promise<MLCEngineInterface> {
-	if (engine) return Promise.resolve(engine);
+export async function getEngine(): Promise<MLCEngineInterface> {
+	await modelIdReady;
+	if (engine) return engine;
 	if (engineInitPromise) return engineInitPromise;
 
-	console.log("[suspicious-ui-detector] loading model:", MODEL_ID);
-	engineInitPromise = CreateMLCEngine(MODEL_ID, {
+	console.log("[suspicious-ui-detector] loading model:", currentModelId);
+	engineInitPromise = CreateMLCEngine(currentModelId, {
 		initProgressCallback: ({ text, progress }) => {
 			console.log(`[suspicious-ui-detector] ${(progress * 100).toFixed(0)}% — ${text}`);
-			broadcastStatus({ stage: "loading", modelId: MODEL_ID, progress });
+			broadcastStatus({ stage: "loading", modelId: currentModelId, progress });
 		},
 	}).then((e) => {
 		engine = e;
