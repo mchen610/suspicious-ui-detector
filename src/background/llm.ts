@@ -256,6 +256,8 @@ async function processQueue(): Promise<void> {
 			const p = tabProgress.get(tabId);
 			if (p) broadcastStatus({ stage: "classifying", total: p.total, done: p.done }, tabId);
 
+			chrome.tabs.sendMessage(tabId, { type: "classificationStarted", id: pkt.id }).catch(() => {});
+
 			const prompt = buildPrompt(pkt, url);
 			let suspicious = false;
 			let raw = "";
