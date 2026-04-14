@@ -169,6 +169,7 @@ function App() {
 
 	function handleDetectionEnabled(value: boolean) {
 		setDetectionEnabled(value);
+		if (value) setStatus({ stage: "idle" });
 
 		// tell background to set detection status
 		chrome.runtime.sendMessage({
@@ -180,6 +181,7 @@ function App() {
 
 	function handleModelChange(modelId: string) {
 		setSelectedModel(modelId);
+		setStatus({ stage: "loading", modelId, progress: 0 });
 		chrome.runtime.sendMessage({ type: "setModel", modelId });
 	}
 
