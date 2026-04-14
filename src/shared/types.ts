@@ -126,10 +126,16 @@ interface SetModelMessageType {
     modelId: string;
 }
 
+interface SetDebugModeMessageType {
+    type: "setDebugMode";
+    enabled: boolean;
+    tabId?: number;
+}
+
 export type BackgroundMessage =
     | ClassifyMessageType | StatusMessageType | ContentReadyMessageType | SettingsMessageType
     | EnableDetectionMessageType | TrustMessageType | DetectionMessageType | IframeFlagMessageType
-    | SetModelMessageType
+    | SetModelMessageType | SetDebugModeMessageType
 
 export function unreachable(value: never): never {
     throw new Error(`Unreachable: unexpected value ${JSON.stringify(value)}`);

@@ -30,13 +30,14 @@ chrome.tabs.onActivated.addListener((info) => setActiveTab(info.tabId));
 
 // Storage helpers
 
-async function getSettings(): Promise<{ detectionEnabled: boolean, trustedSites: string[], modelId: string }> {
+async function getSettings(): Promise<{ detectionEnabled: boolean, trustedSites: string[], modelId: string, debugMode: boolean }> {
 	return new Promise((resolve) => {
-		chrome.storage.local.get(["detectionEnabled", "trustedSites", "modelId"], (result) => {
+		chrome.storage.local.get(["detectionEnabled", "trustedSites", "modelId", "debugMode"], (result) => {
 			resolve({
 				detectionEnabled: result["detectionEnabled"] !== false,
 				trustedSites: result["trustedSites"] ?? [],
 				modelId: result["modelId"] || DEFAULT_MODEL_ID,
+				debugMode: result["debugMode"] === true,
 			});
 		});
 	});
@@ -93,7 +94,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 					idOffset = nextFrameBlock;
 					nextFrameBlock += FRAME_BLOCK_SIZE;
 				}
-				sendResponse({ shouldRun, idOffset });
+				sendResponse({ shouldRun, idOffset, debugMode: settings.debugMode });
 			});
 
 			return true;
@@ -233,6 +234,21 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 					}
 				}
 
+				sendResponse({ ok: true });
+			})();
+
+			return true;
+		}
+
+		case "setDebugMode": {
+			const enabled: boolean = message.enabled;
+			chrome.storage.local.set({ debugMode: enabled });
+
+			(async () => {
+				const tabId = message.tabId ?? (await getActiveTabId());
+				if (tabId !== undefined) {
+					await sendToTab(tabId, { type: "setDebugMode", enabled });
+				}
 				sendResponse({ ok: true });
 			})();
 
