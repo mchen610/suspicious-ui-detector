@@ -3,9 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Test Fixture — Hidden Elements</title>
+  <title>QuickTools — Online Utilities</title>
   <style>
-    body { margin: 0; font-family: sans-serif; padding: 24px; }
+    * { box-sizing: border-box; margin: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; color: #1e293b; }
+
+    .site-header { background: #1e293b; color: white; padding: 14px 24px; display: flex; align-items: center; gap: 16px; }
+    .site-header .logo { font-size: 18px; font-weight: 800; }
+    .site-header nav a { color: #94a3b8; text-decoration: none; font-size: 13px; margin-left: 16px; }
+
+    .container { max-width: 700px; margin: 32px auto; padding: 0 16px; }
+
+    .tool-card { background: white; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); padding: 28px; }
+    .tool-card h1 { font-size: 22px; margin-bottom: 8px; }
+    .tool-card p { font-size: 14px; color: #64748b; line-height: 1.6; margin-bottom: 20px; }
+
+    .tool-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 20px; }
 
     .hidden-display-none { display: none; }
     .hidden-visibility { visibility: hidden; }
@@ -14,35 +27,74 @@
     .offscreen { position: absolute; left: -9999px; }
 
     .visible-btn {
-      display: inline-block; padding: 12px 24px;
-      background: #2196F3; color: white; border: none;
-      border-radius: 4px; cursor: pointer; font-size: 16px;
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 12px 24px; background: #3b82f6; color: white; border: none;
+      border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;
+      transition: background 0.15s;
     }
+    .visible-btn:hover { background: #2563eb; }
+
+    a.tool-link {
+      display: inline-block; padding: 10px 20px; background: #f1f5f9;
+      color: #3b82f6; text-decoration: none; border-radius: 6px;
+      font-size: 14px; font-weight: 500; text-align: center;
+      border: 1px solid #e2e8f0; transition: background 0.15s;
+    }
+    a.tool-link:hover { background: #e2e8f0; }
+
+    .role-btn {
+      padding: 15px; background: #f1f5f9; cursor: pointer;
+      display: inline-block; border-radius: 6px; font-size: 14px;
+      text-align: center; border: 1px solid #e2e8f0; font-weight: 500;
+      transition: background 0.15s;
+    }
+    .role-btn:hover { background: #e2e8f0; }
+
+    .site-footer { text-align: center; padding: 32px; font-size: 12px; color: #94a3b8; }
   </style>
 </head>
 <body>
-<h1>Hidden Elements Test</h1>
-
-<!-- These should be FILTERED OUT by discoverCandidates -->
-<a href="/hidden1" class="hidden-display-none">Hidden Link (display:none)</a>
-<button class="hidden-visibility">Hidden Button (visibility:hidden)</button>
-<a href="/tiny" class="tiny-element">Tiny Link (1x1px)</a>
-<button class="zero-size">Zero Size Button</button>
-
-<!-- This is offscreen but NOT display:none/visibility:hidden and is >= minSize,
-     so it WILL pass the filter -->
-<a href="/offscreen" class="offscreen"
-   style="width:100px;height:40px;display:block;">
-  Offscreen Link
-</a>
-
-<!-- These SHOULD be discovered -->
-<button class="visible-btn">Visible Button</button>
-<a href="/real-link" style="display:inline-block;padding:10px 20px;">
-  Visible Link
-</a>
-<div role="button" style="padding:15px;background:#eee;cursor:pointer;display:inline-block;">
-  Role Button
+<div class="site-header">
+    <span class="logo">QuickTools</span>
+    <nav>
+        <a href="/convert">Convert</a>
+        <a href="/compress">Compress</a>
+        <a href="/merge">Merge</a>
+        <a href="/help">Help</a>
+    </nav>
 </div>
+
+<div class="container">
+    <div class="tool-card">
+        <h1>PDF Converter</h1>
+        <p>Convert your documents to PDF instantly. Drag and drop a file or click below to get started.</p>
+
+        <!-- These should be FILTERED OUT by discoverCandidates -->
+        <a href="/hidden1" class="hidden-display-none">Hidden Link (display:none)</a>
+        <button class="hidden-visibility">Hidden Button (visibility:hidden)</button>
+        <a href="/tiny" class="tiny-element">Tiny Link (1x1px)</a>
+        <button class="zero-size">Zero Size Button</button>
+
+        <!-- This is offscreen but NOT display:none/visibility:hidden and is >= minSize,
+             so it WILL pass the filter -->
+        <a href="/offscreen" class="offscreen"
+           style="width:100px;height:40px;display:block;">
+          Offscreen Link
+        </a>
+
+        <!-- These SHOULD be discovered -->
+        <div class="tool-grid">
+            <button class="visible-btn">Visible Button</button>
+            <a href="/real-link" class="tool-link">
+              Visible Link
+            </a>
+            <div role="button" class="role-btn">
+              Role Button
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="site-footer">&copy; 2025 QuickTools. All rights reserved.</div>
 </body>
 </html>
