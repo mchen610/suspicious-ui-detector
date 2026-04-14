@@ -3,56 +3,82 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Test Fixture — Fake Download Page</title>
+    <title>APKMirror — SuperApp v3.2.1</title>
     <style>
-        body { margin: 0; font-family: sans-serif; }
+        * { box-sizing: border-box; margin: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; color: #1e293b; }
 
-        .page-header {
-            background: #2d2d2d; color: white;
-            padding: 16px; font-size: 18px;
-        }
+        .page-header { background: #1a1a2e; color: white; padding: 14px 24px; display: flex; align-items: center; gap: 16px; }
+        .page-header .logo { font-size: 20px; font-weight: 800; }
+        .page-header .logo span { color: #4ade80; }
+        .page-header nav a { color: #94a3b8; text-decoration: none; font-size: 13px; margin-left: 16px; }
 
         .content { padding: 24px; max-width: 800px; margin: 0 auto; }
 
-        /* Real download button */
+        .file-info { background: white; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); padding: 24px; margin-bottom: 20px; }
+        .file-info h1 { font-size: 22px; margin-bottom: 6px; }
+        .file-info .meta { font-size: 13px; color: #64748b; margin-bottom: 16px; }
+        .file-info .meta span { margin-right: 16px; }
+        .file-info p { font-size: 14px; color: #475569; line-height: 1.6; }
+
         .real-download {
             display: inline-block; padding: 12px 24px;
-            background: #4CAF50; color: white;
-            text-decoration: none; border-radius: 4px;
-            font-size: 16px; cursor: pointer;
+            background: #22c55e; color: white;
+            text-decoration: none; border-radius: 6px;
+            font-size: 16px; font-weight: 600; cursor: pointer;
         }
 
         /* Disguised ad — styled to mimic the real download */
         .ad-container {
-            margin: 20px 0; padding: 16px;
-            border: 1px solid #ddd; border-radius: 8px;
+            margin: 20px 0; padding: 20px;
+            background: white; border: 1px solid #e2e8f0; border-radius: 10px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
             position: relative;
         }
         .ad-container .ad-label {
-            font-size: 10px; color: #999;
-            position: absolute; top: 4px; right: 8px;
+            font-size: 10px; color: #a0aec0;
+            position: absolute; top: 8px; right: 12px;
+            text-transform: uppercase; letter-spacing: 0.5px;
         }
         .ad-container .fake-download-btn {
             display: inline-block; padding: 14px 32px;
-            background: #43A047; color: white;
-            text-decoration: none; border-radius: 4px;
+            background: linear-gradient(135deg, #22c55e, #16a34a); color: white;
+            text-decoration: none; border-radius: 6px;
             font-size: 18px; font-weight: bold;
-            cursor: pointer;
+            cursor: pointer; box-shadow: 0 2px 8px rgba(34,197,94,0.3);
         }
 
         /* Ezoic-style ad wrapper */
         .ezoic-ad {
             margin: 20px 0; min-height: 90px;
             background: #fafafa; text-align: center;
+            border: 1px solid #e2e8f0; border-radius: 8px;
         }
+
+        .site-footer { text-align: center; padding: 24px; font-size: 12px; color: #94a3b8; }
     </style>
 </head>
 <body>
-<div class="page-header">APKMirror — SuperApp v3.2.1</div>
+<div class="page-header">
+    <span class="logo">APK<span>Mirror</span></span>
+    <nav>
+        <a href="/apps">Apps</a>
+        <a href="/games">Games</a>
+        <a href="/uploads">Uploads</a>
+        <a href="/faq">FAQ</a>
+    </nav>
+</div>
 
 <div class="content">
-    <h1>Download SuperApp v3.2.1</h1>
-    <p>Your file is ready for download.</p>
+    <div class="file-info">
+        <h1>Download SuperApp v3.2.1</h1>
+        <div class="meta">
+            <span>Version: 3.2.1</span>
+            <span>Size: 24.1 MB</span>
+            <span>Updated: Jan 15, 2025</span>
+        </div>
+        <p>Your file is ready for download.</p>
+    </div>
 
     <!-- Disguised ad block -->
     <div class="ad-container" data-ad-slot="banner-top-1">
@@ -68,7 +94,16 @@
         Download APK (24.1 MB)
     </a>
 
-    <p>Version notes: Bug fixes and performance improvements.</p>
+    <!-- Ezoic-style ad wrapper -->
+    <div class="ezoic-ad" style="margin:20px 0; min-height:90px; background:#fafafa; text-align:center; border:1px solid #e2e8f0; border-radius:8px;">
+    </div>
+
+    <p style="margin-top:20px; font-size:14px; color:#64748b; line-height:1.6;">
+        Version notes: Bug fixes and performance improvements.
+        Compatible with Android 8.0+. Requires 50 MB free storage.
+    </p>
 </div>
+
+<div class="site-footer">&copy; 2025 APKMirror. All rights reserved.</div>
 </body>
 </html>

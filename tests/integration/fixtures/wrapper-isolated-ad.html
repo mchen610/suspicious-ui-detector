@@ -3,30 +3,55 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Test Fixture — Wrapper-Isolated Ad Links</title>
+  <title>APKMirror — SuperApp v3.2.1</title>
   <style>
-    body { margin: 0; font-family: sans-serif; padding: 24px; }
-    .content { max-width: 800px; margin: 0 auto; }
+    * { box-sizing: border-box; margin: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; color: #1e293b; }
+
+    .site-header { background: #1a1a2e; color: white; padding: 14px 24px; display: flex; align-items: center; gap: 16px; }
+    .site-header .logo { font-size: 20px; font-weight: 800; }
+    .site-header .logo span { color: #4ade80; }
+
+    .content { max-width: 800px; margin: 24px auto; padding: 0 16px; }
+
+    .file-card { background: white; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); padding: 24px; margin-bottom: 20px; }
+    .file-card h1 { font-size: 22px; margin-bottom: 8px; }
+    .file-card p { font-size: 14px; color: #64748b; line-height: 1.6; }
+
     .ad-container {
-      margin: 20px 0; padding: 16px;
-      border: 1px solid #ddd; border-radius: 8px;
+      margin: 20px 0; padding: 20px;
+      background: white; border: 1px solid #e2e8f0; border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
     }
     .fake-download-btn {
       display: inline-block; padding: 14px 32px;
-      background: #43A047; color: white; text-decoration: none;
-      border-radius: 4px; font-size: 18px; cursor: pointer;
+      background: linear-gradient(135deg, #22c55e, #16a34a); color: white;
+      text-decoration: none; border-radius: 6px;
+      font-size: 18px; font-weight: 700; cursor: pointer;
+      box-shadow: 0 2px 8px rgba(34,197,94,0.3);
     }
     .real-download {
       display: inline-block; padding: 12px 24px;
-      background: #1976D2; color: white; text-decoration: none;
-      border-radius: 4px; font-size: 16px;
+      background: #3b82f6; color: white; text-decoration: none;
+      border-radius: 6px; font-size: 16px; font-weight: 600;
     }
+    .ad-label-text {
+      font-size: 10px; color: #a0aec0; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+
+    .site-footer { text-align: center; padding: 32px; font-size: 12px; color: #94a3b8; }
   </style>
 </head>
 <body>
+<div class="site-header">
+    <span class="logo">APK<span>Mirror</span></span>
+</div>
+
 <div class="content">
-  <h1>Download SuperApp v3.2.1</h1>
-  <p>Your file is ready for download.</p>
+  <div class="file-card">
+    <h1>Download SuperApp v3.2.1</h1>
+    <p>Your file is ready for download.</p>
+  </div>
 
   <!-- Ad link is sole child of wrapper div — no siblings, no bare
        text nodes in parent. Nearby context ("Download SuperApp",
@@ -41,7 +66,7 @@
 
   <!-- Same pattern but with a sibling span label INSIDE the wrapper -->
   <div class="ad-container" data-ad-slot="banner-2">
-    <span style="font-size:10px;color:#999;">Advertisement</span>
+    <span class="ad-label-text">Advertisement</span>
     <a class="fake-download-btn"
        href="https://ad-network.example.com/click?id=2"
        target="_blank">
@@ -50,7 +75,7 @@
   </div>
 
   <!-- Same pattern but label is OUTSIDE the wrapper as a sibling -->
-  <span style="font-size:10px;color:#999;display:block;">Advertisement</span>
+  <span class="ad-label-text" style="display:block; margin-bottom:4px;">Advertisement</span>
   <div class="ad-container" data-ad-slot="banner-3">
     <a class="fake-download-btn"
        href="https://ad-network.example.com/click?id=3"
@@ -59,9 +84,13 @@
     </a>
   </div>
 
-  <a class="real-download" href="/files/superapp-3.2.1.apk" download>
-    Download APK (24.1 MB)
-  </a>
+  <div style="margin-top:20px;">
+    <a class="real-download" href="/files/superapp-3.2.1.apk" download>
+      Download APK (24.1 MB)
+    </a>
+  </div>
 </div>
+
+<div class="site-footer">&copy; 2025 APKMirror. All rights reserved.</div>
 </body>
 </html>

@@ -3,34 +3,92 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Test Fixture — Iframe Ad</title>
+    <title>TechBuzz — Latest Updates</title>
     <style>
-        body { margin: 0; font-family: sans-serif; padding: 24px; }
-        .ad-iframe-wrapper {
-            margin: 20px 0; text-align: center; overflow: hidden;
-        }
-        .ad-iframe-wrapper iframe {
-            border: 1px solid #ccc; display: block; margin: 0 auto;
-        }
+        * { box-sizing: border-box; margin: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; color: #1a1a2e; }
+
+        .site-header { background: #1a1a2e; color: white; padding: 14px 24px; display: flex; align-items: center; gap: 16px; }
+        .site-header .logo { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+        .site-header nav a { color: #a0aec0; text-decoration: none; font-size: 14px; margin-left: 16px; }
+        .site-header nav a:hover { color: white; }
+
+        .container { max-width: 820px; margin: 24px auto; padding: 0 16px; }
+        article { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); overflow: hidden; }
+        article .hero { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 32px; }
+        article .hero h1 { font-size: 26px; line-height: 1.3; }
+        article .hero .meta { font-size: 13px; opacity: 0.8; margin-top: 8px; }
+        article .body { padding: 24px 32px; line-height: 1.7; font-size: 15px; color: #333; }
+        article .body p { margin-bottom: 16px; }
+
+        .ad-iframe-wrapper { margin: 24px 0; text-align: center; overflow: hidden; background: #fafafa; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; }
+        .ad-iframe-wrapper iframe { border: 1px solid #e2e8f0; display: block; margin: 0 auto; background: #f7f7f7; }
+        .ad-label { display: block; font-size: 10px; color: #a0aec0; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+
+        .video-section { margin: 24px 0; }
+        .video-section h3 { font-size: 16px; margin-bottom: 12px; color: #4a5568; }
+
+        .actions { display: flex; gap: 12px; margin-top: 24px; padding-top: 20px; border-top: 1px solid #e2e8f0; }
+        .actions button { padding: 10px 24px; font-size: 14px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+        .btn-primary { background: #667eea; color: white; border: none; }
+        .btn-outline { background: white; color: #667eea; border: 2px solid #667eea; }
+
+        .site-footer { text-align: center; padding: 24px; font-size: 12px; color: #a0aec0; }
     </style>
 </head>
 <body>
-<h1>Iframe Ad Test</h1>
-<p>Content before the ad iframe.</p>
-
-<div class="ad-iframe-wrapper" id="div-gpt-ad-12345">
-    <iframe src="about:blank" width="728" height="90"
-            title="Advertisement">
-    </iframe>
+<div class="site-header">
+    <span class="logo">TechBuzz</span>
+    <nav>
+        <a href="/news">News</a>
+        <a href="/reviews">Reviews</a>
+        <a href="/downloads">Downloads</a>
+        <a href="/videos">Videos</a>
+    </nav>
 </div>
 
-<p>Content after the ad iframe.</p>
+<div class="container">
+    <article>
+        <div class="hero">
+            <h1>How AI is Changing Mobile App Security in 2025</h1>
+            <div class="meta">By Sarah Chen &mdash; January 15, 2025 &middot; 6 min read</div>
+        </div>
+        <div class="body">
+            <p>The rise of on-device machine learning has opened new frontiers in mobile security.
+               Modern smartphones can now run small language models locally, enabling real-time
+               threat detection without sending data to the cloud.</p>
 
-<!-- A legitimate iframe (e.g., embedded video) -->
-<iframe src="https://www.youtube.com/embed/LPZh9BOjkQs" width="560" height="315"
-        title="Embedded Video" allowfullscreen>
-</iframe>
+            <div class="ad-iframe-wrapper" id="div-gpt-ad-12345">
+                <span class="ad-label">Advertisement</span>
+                <iframe src="about:blank" width="728" height="90"
+                        title="Advertisement">
+                </iframe>
+            </div>
 
-<button onclick="alert('legit')">Subscribe</button>
+            <p>Security researchers have demonstrated that even 2-3 billion parameter models
+               can effectively identify phishing attempts, deceptive UI patterns, and malicious
+               download links with surprising accuracy.</p>
+
+            <div class="video-section">
+                <h3>Watch: On-Device AI Security Demo</h3>
+                <iframe src="https://www.youtube.com/embed/LPZh9BOjkQs" width="560" height="315"
+                        title="Embedded Video" allowfullscreen
+                        style="border:none; border-radius:6px;">
+                </iframe>
+            </div>
+
+            <p>The implications for user privacy are significant. By keeping inference local,
+               these tools can analyze page content without ever transmitting browsing data
+               to external servers.</p>
+
+            <div class="actions">
+                <button class="btn-primary" onclick="alert('legit')">Subscribe</button>
+                <button class="btn-outline">Share Article</button>
+            </div>
+        </div>
+    </article>
+</div>
+
+<div class="site-footer">&copy; 2025 TechBuzz. All rights reserved.</div>
 </body>
 </html>
