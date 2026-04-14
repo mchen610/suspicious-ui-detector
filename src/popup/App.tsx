@@ -187,6 +187,7 @@ function App() {
 
 	function handleTrustThisSite(value: boolean) {
 		setTrustThisSite(value);
+		setStatus(value ? { stage: "done", flagged: 0 } : { stage: "idle" });
 
 		// tell background to set currentHostname trusted site status
 		chrome.runtime.sendMessage({

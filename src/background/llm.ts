@@ -63,6 +63,13 @@ export type PipelineStatus =
 
 const tabStatus = new Map<number, PipelineStatus>();
 const tabProgress = new Map<number, { total: number; done: number }>();
+const tabGeneration = new Map<number, number>();
+
+export function cancelTab(tabId: number) {
+	tabGeneration.set(tabId, (tabGeneration.get(tabId) ?? 0) + 1);
+	tabProgress.delete(tabId);
+	tabStatus.delete(tabId);
+}
 
 function broadcastStatus(status: PipelineStatus, tabId?: number) {
 	if (tabId !== undefined) tabStatus.set(tabId, status);
@@ -160,8 +167,10 @@ async function classifyOne(eng: MLCEngineInterface, prompt: string): Promise<{ s
 
 export async function classifyPacketsWithInference(packets: EvidencePacket[], url?: string, tabId?: number): Promise<void> {
 	const gen = generation;
+	const tabGen = tabId !== undefined ? (tabGeneration.get(tabId) ?? 0) : 0;
+	const stale = () => gen !== generation || (tabId !== undefined && (tabGeneration.get(tabId) ?? 0) !== tabGen);
 	const eng = await getEngine();
-	if (gen !== generation) return;
+	if (stale()) return;
 
 	console.log(`[suspicious-ui-detector] classifying ${packets.length} packets from ${url}`);
 
@@ -180,7 +189,7 @@ export async function classifyPacketsWithInference(packets: EvidencePacket[], ur
 	broadcastStatus({ stage: "classifying", total: p.total, done: p.done }, tabId);
 
 	for (const pkt of packets) {
-		if (gen !== generation) return;
+		if (stale()) return;
 
 		const prompt = buildPrompt(pkt, url);
 		let suspicious = false;
@@ -194,7 +203,7 @@ export async function classifyPacketsWithInference(packets: EvidencePacket[], ur
 			raw = String(err);
 		}
 
-		if (gen !== generation) return;
+		if (stale()) return;
 
 		const explanation = raw.replace(/<think>[\s\S]*?<\/think>/g, "").trim() || undefined;
 
