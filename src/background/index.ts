@@ -1,4 +1,4 @@
-import { classifyPacketsWithInference, getStatusForTab, setModelId } from "./llm";
+import { classifyPacketsWithInference, getStatusForTab, setModelId, cancelTab } from "./llm";
 import { EvidencePacket, BackgroundMessage, unreachable } from "../shared/types";
 import { DEFAULT_MODEL_ID } from "../shared/models";
 
@@ -197,6 +197,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 				const tabId = message.tabId ?? (await getActiveTabId());
 				if (tabId !== undefined) {
+					if (trusted) cancelTab(tabId);
 					// only re-enable if detection is globally enabled
 					const shouldRun = !trusted && settings.detectionEnabled;
 					await sendToTab(tabId, {type: "detectionToggle", enabled: shouldRun});
