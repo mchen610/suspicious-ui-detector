@@ -211,7 +211,28 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 		case "setModel": {
 			const modelId: string = message.modelId;
 			chrome.storage.local.set({ modelId });
-			setModelId(modelId).then(() => sendResponse({ ok: true }));
+
+			(async () => {
+				await setModelId(modelId);
+
+				// Re-run detection on the active tab with the new model
+				const tabId = await getActiveTabId();
+				if (tabId !== undefined) {
+					const settings = await getSettings();
+					const tab = await chrome.tabs.get(tabId);
+					const hostname = tab.url ? new URL(tab.url).hostname : null;
+					const shouldRun = settings.detectionEnabled
+						&& !(hostname && settings.trustedSites.includes(hostname));
+
+					await sendToTab(tabId, { type: "detectionToggle", enabled: false });
+					if (shouldRun) {
+						await sendToTab(tabId, { type: "detectionToggle", enabled: true });
+					}
+				}
+
+				sendResponse({ ok: true });
+			})();
+
 			return true;
 		}
 
