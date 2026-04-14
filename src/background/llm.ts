@@ -34,6 +34,7 @@ Think step-by-step in 1-2 plain sentences first. No markdown, no bullet points, 
 let currentModelId = DEFAULT_MODEL_ID;
 let engine: MLCEngineInterface | null = null;
 let engineInitPromise: Promise<MLCEngineInterface> | null = null;
+let generation = 0;
 
 const modelIdReady = new Promise<void>((resolve) => {
 	chrome.storage.local.get(["modelId"], (result) => {
@@ -44,6 +45,8 @@ const modelIdReady = new Promise<void>((resolve) => {
 
 export async function setModelId(newId: string): Promise<void> {
 	currentModelId = newId;
+	generation++;
+	tabProgress.clear();
 	const oldEngine = engine;
 	engine = null;
 	engineInitPromise = null;
@@ -156,7 +159,9 @@ async function classifyOne(eng: MLCEngineInterface, prompt: string): Promise<{ s
 }
 
 export async function classifyPacketsWithInference(packets: EvidencePacket[], url?: string, tabId?: number): Promise<void> {
+	const gen = generation;
 	const eng = await getEngine();
+	if (gen !== generation) return;
 
 	console.log(`[suspicious-ui-detector] classifying ${packets.length} packets from ${url}`);
 
@@ -175,6 +180,8 @@ export async function classifyPacketsWithInference(packets: EvidencePacket[], ur
 	broadcastStatus({ stage: "classifying", total: p.total, done: p.done }, tabId);
 
 	for (const pkt of packets) {
+		if (gen !== generation) return;
+
 		const prompt = buildPrompt(pkt, url);
 		let suspicious = false;
 		let raw = "";
@@ -186,6 +193,8 @@ export async function classifyPacketsWithInference(packets: EvidencePacket[], ur
 			console.error(`[suspicious-ui-detector] classify error for #${pkt.id}:`, err);
 			raw = String(err);
 		}
+
+		if (gen !== generation) return;
 
 		const explanation = raw.replace(/<think>[\s\S]*?<\/think>/g, "").trim() || undefined;
 
