@@ -34,11 +34,13 @@ let idOffset = 0;
 let elementMap = new Map<number, HTMLElement>();
 let detectionActive = false;
 let adObserver: MutationObserver | null = null;
+let debugMode = false;
 
 // --- Overlay / highlight state ---
 
 const overlayMap = new Map<number, { el: HTMLElement; overlay: HTMLDivElement }>();
 let flaggedElements = new Set<HTMLElement>();
+const debugOverlayIds = new Set<number>();
 
 function injectStyles() {
     const style = document.createElement("style");
@@ -133,7 +135,7 @@ function highlightElement(id: number, el: HTMLElement, explanation?: string) {
     el.classList.add("suspicious-ui-detector-highlighted");
 
     const overlay = document.createElement("div");
-    overlay.className = "suspicious-ui-detector-glow";
+    overlay.className = "suspicious-ui-detector-glow suspicious-ui-detector-glow--suspicious";
 
     const badge = document.createElement("span");
     badge.className = "suspicious-ui-detector-badge";
@@ -155,6 +157,28 @@ function highlightElement(id: number, el: HTMLElement, explanation?: string) {
     positionOverlay(el, overlay);
     document.body.appendChild(overlay);
     overlayMap.set(id, { el, overlay });
+}
+
+function showPendingOverlays() {
+    if (!debugMode) return;
+    for (const [id, el] of elementMap) {
+        if (overlayMap.has(id)) continue;
+        const rect = el.getBoundingClientRect();
+        if (rect.width === 0 && rect.height === 0) continue;
+
+        const overlay = document.createElement("div");
+        overlay.className = "suspicious-ui-detector-glow suspicious-ui-detector-glow--queued";
+
+        const badge = document.createElement("span");
+        badge.className = "suspicious-ui-detector-badge suspicious-ui-detector-badge--queued";
+        badge.textContent = "Queued";
+        overlay.appendChild(badge);
+
+        positionOverlay(el, overlay);
+        document.body.appendChild(overlay);
+        overlayMap.set(id, { el, overlay });
+        debugOverlayIds.add(id);
+    }
 }
 
 // --- Pipeline ---
@@ -192,6 +216,11 @@ function handleClassifications(classifications: ClassificationResult[]): void {
         );
 
         if (result.category !== "benign") {
+            // Remove debug overlay before adding the real suspicious one
+            if (debugOverlayIds.has(result.id)) {
+                removeOverlay(result.id);
+                debugOverlayIds.delete(result.id);
+            }
             // if inside iframe defer visual highlighting to parent
             if (window !== window.top) {
                 chrome.runtime.sendMessage(
@@ -200,6 +229,24 @@ function handleClassifications(classifications: ClassificationResult[]): void {
                 );
             } else {
                 highlightElement(result.id, elem, result.explanation);
+            }
+        } else if (debugOverlayIds.has(result.id)) {
+            // Transition pending → safe (green), then fade out
+            const entry = overlayMap.get(result.id);
+            if (entry) {
+                entry.overlay.classList.remove("suspicious-ui-detector-glow--queued", "suspicious-ui-detector-glow--processing");
+                entry.overlay.classList.add("suspicious-ui-detector-glow--safe");
+                const badge = entry.overlay.querySelector(".suspicious-ui-detector-badge");
+                if (badge) {
+                    badge.classList.remove("suspicious-ui-detector-badge--queued", "suspicious-ui-detector-badge--processing");
+                    badge.classList.add("suspicious-ui-detector-badge--safe");
+                    badge.textContent = "Safe";
+                }
+                entry.overlay.classList.add("suspicious-ui-detector-glow--fade");
+                entry.overlay.addEventListener("animationend", () => {
+                    removeOverlay(result.id);
+                    debugOverlayIds.delete(result.id);
+                });
             }
         }
     }
@@ -214,6 +261,7 @@ function clearAllOverlays() {
         removeOverlay(id);
     }
     flaggedElements.clear();
+    debugOverlayIds.clear();
 }
 
 // --- Run detection ---
@@ -309,6 +357,8 @@ function runDetection() {
         `from ${extractionResult.url}`,
     );
 
+    showPendingOverlays();
+
     if (extractionResult.packets.length > 0) {
         chrome.runtime.sendMessage(
             { type: "classify", packets: extractionResult.packets, url: extractionResult.url },
@@ -337,7 +387,21 @@ if ((window as any).__suspiciousUiDetectorRan) {
 
         chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
             // listen for toggle messages from the background worker
-            if (message.type === "classificationResult") {
+            if (message.type === "classificationStarted") {
+                if (debugOverlayIds.has(message.id)) {
+                    const entry = overlayMap.get(message.id);
+                    if (entry) {
+                        entry.overlay.classList.remove("suspicious-ui-detector-glow--queued");
+                        entry.overlay.classList.add("suspicious-ui-detector-glow--processing");
+                        const badge = entry.overlay.querySelector(".suspicious-ui-detector-badge");
+                        if (badge) {
+                            badge.classList.remove("suspicious-ui-detector-badge--queued");
+                            badge.classList.add("suspicious-ui-detector-badge--processing");
+                            badge.textContent = "Processing…";
+                        }
+                    }
+                }
+            } else if (message.type === "classificationResult") {
                 handleClassifications([message.result]);
             } else if (message.type === "detectionToggle") {
                 if (message.enabled) {
@@ -347,6 +411,14 @@ if ((window as any).__suspiciousUiDetectorRan) {
                 }
             } else if (message.type === "getDetections") {
                 sendResponse({ count: flaggedElements.size });
+            } else if (message.type === "setDebugMode") {
+                debugMode = message.enabled;
+                if (!message.enabled) {
+                    for (const id of debugOverlayIds) {
+                        removeOverlay(id);
+                    }
+                    debugOverlayIds.clear();
+                }
             }
 
             // listen for relayed iframe flag messages from the background worker
@@ -382,6 +454,7 @@ if ((window as any).__suspiciousUiDetectorRan) {
 
                 if (response?.shouldRun) {
                     idOffset = response.idOffset ?? 0;
+                    debugMode = response.debugMode ?? false;
                     runDetection();
                 } else {
                     console.debug("[suspicious-ui-detector] background says skip detection for this page")

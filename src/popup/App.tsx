@@ -81,6 +81,7 @@ function App() {
 	const [activeTabId, setActiveTabId] = useState<number | undefined>();
 	const [settingsLoaded, setSettingsLoaded] = useState(false);
 	const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL_ID);
+	const [debugModeEnabled, setDebugModeEnabled] = useState(false);
 
 	useEffect(() => {
 		const gpuProbe = getMaxBufferSizeMB();
@@ -119,6 +120,7 @@ function App() {
 				}
 
 				setDetectionEnabled(settings?.detectionEnabled !== false);
+				setDebugModeEnabled(settings?.debugMode === true);
 				const trusted: string[] = settings?.trustedSites ?? [];
 				setTrustThisSite(hostname !== null && trusted.includes(hostname));
 
@@ -186,6 +188,15 @@ function App() {
 		});
 	}
 
+	function handleDebugMode(value: boolean) {
+		setDebugModeEnabled(value);
+		chrome.runtime.sendMessage({
+			type: "setDebugMode",
+			enabled: value,
+			tabId: activeTabId,
+		});
+	}
+
 	return (
 		<div className="w-[280px] bg-white font-sans">
 			<div className="px-4 py-3 border-b border-gray-100">
@@ -218,6 +229,7 @@ function App() {
 					</label>
 					<Toggle label="Enable detection" on={detectionEnabled} onChange={handleDetectionEnabled} />
 					<Toggle label="Trust this site" on={trustThisSite} onChange={handleTrustThisSite} />
+					<Toggle label="Debug mode" on={debugModeEnabled} onChange={handleDebugMode} />
 				</div>
 			)}
 		</div>
