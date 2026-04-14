@@ -163,7 +163,7 @@ function App() {
 		// tell background to set detection status
 		chrome.runtime.sendMessage({
 			type: "setDetectionEnabled",
-			value: value,
+			enabled: value,
 			tabId: activeTabId,
 		});
 	}
