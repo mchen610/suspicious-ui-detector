@@ -348,6 +348,39 @@ function observeAdContainers() {
     );
 }
 
+function rescanForNewCandidates() {
+    if (!detectionActive) return;
+
+    const knownElements = new Set(elementMap.values());
+    const allCandidates = discoverCandidates(document, DEFAULT_CONFIG);
+    const newCandidates = allCandidates.filter(el => !knownElements.has(el));
+
+    if (newCandidates.length === 0) return;
+
+    console.debug(
+        `[suspicious-ui-detector] rescan found ${newCandidates.length} new candidates`
+    );
+
+    const startID = Math.max(...elementMap.keys(), -1) + 1;
+    const result = extractEvidence(newCandidates, DEFAULT_CONFIG);
+
+    for (let i = 0; i < result.packets.length; i++) {
+        result.packets[i].id = startID + i;
+    }
+    for (let i = 0; i < newCandidates.length; i++) {
+        elementMap.set(startID + i, newCandidates[i]);
+    }
+
+    showPendingOverlays();
+
+    if (result.packets.length > 0) {
+        chrome.runtime.sendMessage(
+            { type: "classify", packets: result.packets, url: result.url },
+            () => void chrome.runtime.lastError,
+        );
+    }
+}
+
 function runDetection() {
     detectionActive = true;
     const extractionResult = runPipeline();
@@ -368,6 +401,13 @@ function runDetection() {
 
     // start watching for late injected ad content
     observeAdContainers();
+
+    // rescan after page fully loads to catch elements sized by late JS
+    if (document.readyState === "complete") {
+        rescanForNewCandidates();
+    } else {
+        window.addEventListener("load", rescanForNewCandidates, { once: true });
+    }
 }
 
 if ((window as any).__suspiciousUiDetectorRan) {
