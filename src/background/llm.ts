@@ -47,6 +47,7 @@ export async function setModelId(newId: string): Promise<void> {
 	currentModelId = newId;
 	generation++;
 	tabProgress.clear();
+	tabQueues.clear();
 	const oldEngine = engine;
 	engine = null;
 	engineInitPromise = null;
@@ -64,10 +65,27 @@ const tabStatus = new Map<number, PipelineStatus>();
 const tabProgress = new Map<number, { total: number; done: number }>();
 const tabGeneration = new Map<number, number>();
 
+const tabQueues = new Map<number, QueueEntry[]>();
+let activeTabId: number | undefined;
+let processingQueue = false;
+
+interface QueueEntry {
+	packet: EvidencePacket;
+	url?: string;
+	tabId: number;
+	gen: number;
+	tabGen: number;
+}
+
+export function setActiveTab(tabId: number) {
+	activeTabId = tabId;
+}
+
 export function cancelTab(tabId: number) {
 	tabGeneration.set(tabId, (tabGeneration.get(tabId) ?? 0) + 1);
 	tabProgress.delete(tabId);
 	tabStatus.delete(tabId);
+	tabQueues.delete(tabId);
 }
 
 function broadcastStatus(status: PipelineStatus, tabId?: number) {
@@ -164,74 +182,124 @@ async function classifyOne(eng: MLCEngineInterface, prompt: string): Promise<{ s
 	return { suspicious: lastWord === "SUSPICIOUS", raw };
 }
 
-export async function classifyPacketsWithInference(packets: EvidencePacket[], url?: string, tabId?: number): Promise<void> {
+export function enqueuePackets(packets: EvidencePacket[], url: string | undefined, tabId: number): void {
+	console.log(`[suspicious-ui-detector] enqueuing ${packets.length} packets for tab ${tabId}`);
+
 	const gen = generation;
-	const tabGen = tabId !== undefined ? (tabGeneration.get(tabId) ?? 0) : 0;
-	const stale = () => gen !== generation || (tabId !== undefined && (tabGeneration.get(tabId) ?? 0) !== tabGen);
-	const eng = await getEngine();
-	if (stale()) return;
+	const tabGen = tabGeneration.get(tabId) ?? 0;
 
-	console.log(`[suspicious-ui-detector] classifying ${packets.length} packets from ${url}`);
-
-	const hostname = url
-		? (() => { try { return new URL(url).hostname; } catch { return url; } })() : "unknown";
-
-	// Accumulate totals across multiple concurrent batches for the same tab
-	const progress = tabId !== undefined ? tabProgress.get(tabId) : undefined;
+	const progress = tabProgress.get(tabId);
 	if (progress) {
 		progress.total += packets.length;
-	} else if (tabId !== undefined) {
+	} else {
 		tabProgress.set(tabId, { total: packets.length, done: 0 });
 	}
 
-	const p = tabId !== undefined ? tabProgress.get(tabId)! : { total: packets.length, done: 0 };
-	broadcastStatus({ stage: "classifying", total: p.total, done: p.done }, tabId);
-
-	for (const pkt of packets) {
-		if (stale()) return;
-
-		const prompt = buildPrompt(pkt, url);
-		let suspicious = false;
-		let raw = "";
-		try {
-			const result = await classifyOne(eng, prompt);
-			suspicious = result.suspicious;
-			raw = result.raw;
-		} catch (err) {
-			console.error(`[suspicious-ui-detector] classify error for #${pkt.id}:`, err);
-			raw = String(err);
+	const iframeEntries: QueueEntry[] = [];
+	const otherEntries: QueueEntry[] = [];
+	for (const packet of packets) {
+		const entry = { packet, url, tabId, gen, tabGen };
+		if (packet.tagName === "iframe" || packet.isInIFrame) {
+			iframeEntries.push(entry);
+		} else {
+			otherEntries.push(entry);
 		}
-
-		if (stale()) return;
-
-		const explanation = raw.replace(/<think>[\s\S]*?<\/think>/g, "").trim() || undefined;
-
-		console.log(
-			`[suspicious-ui-detector] #${pkt.id} <${pkt.tagName}> [${hostname}] → ${suspicious ? "SUSPICIOUS" : "SAFE"}` +
-			`\nprompt:\n${prompt}` +
-			`\nresponse:\n${explanation ?? "(empty)"}`
-		);
-
-		const classification: ClassificationResult = {
-			id: pkt.id,
-			category: suspicious ? "suspicious" : "benign",
-			confidence: suspicious ? "medium" : "low",
-			explanation,
-		};
-
-		// Stream result to content script as soon as it's ready
-		if (tabId !== undefined) {
-			chrome.tabs.sendMessage(tabId, { type: "classificationResult", result: classification }).catch(() => {});
-		}
-
-		p.done++;
-		broadcastStatus({ stage: "classifying", total: p.total, done: p.done }, tabId);
 	}
 
-	// Only broadcast "done" when all packets for this tab are finished
-	if (p.done >= p.total) {
-		if (tabId !== undefined) tabProgress.delete(tabId);
-		broadcastStatus({ stage: "done" }, tabId);
+	const existing = tabQueues.get(tabId);
+	if (existing) {
+		existing.unshift(...iframeEntries);
+		existing.push(...otherEntries);
+	} else {
+		tabQueues.set(tabId, [...iframeEntries, ...otherEntries]);
+	}
+
+	processQueue();
+}
+
+function pickNext(): QueueEntry | undefined {
+	if (activeTabId !== undefined) {
+		const q = tabQueues.get(activeTabId);
+		if (q && q.length > 0) return q.shift();
+	}
+	for (const [, q] of tabQueues) {
+		if (q.length > 0) return q.shift();
+	}
+	return undefined;
+}
+
+function isEntryStale(entry: QueueEntry): boolean {
+	return entry.gen !== generation || (tabGeneration.get(entry.tabId) ?? 0) !== entry.tabGen;
+}
+
+async function processQueue(): Promise<void> {
+	if (processingQueue) return;
+	processingQueue = true;
+
+	try {
+		let eng = await getEngine();
+		let currentGen = generation;
+
+		let entry: QueueEntry | undefined;
+		while ((entry = pickNext()) !== undefined) {
+			if (generation !== currentGen) {
+				eng = await getEngine();
+				currentGen = generation;
+			}
+
+			if (isEntryStale(entry)) continue;
+
+			const { packet: pkt, url, tabId } = entry;
+			const hostname = url
+				? (() => { try { return new URL(url).hostname; } catch { return url; } })() : "unknown";
+
+			const p = tabProgress.get(tabId);
+			if (p) broadcastStatus({ stage: "classifying", total: p.total, done: p.done }, tabId);
+
+			const prompt = buildPrompt(pkt, url);
+			let suspicious = false;
+			let raw = "";
+			try {
+				const result = await classifyOne(eng, prompt);
+				suspicious = result.suspicious;
+				raw = result.raw;
+			} catch (err) {
+				console.error(`[suspicious-ui-detector] classify error for #${pkt.id}:`, err);
+				raw = String(err);
+			}
+
+			if (isEntryStale(entry)) continue;
+
+			const explanation = raw.replace(/<think>[\s\S]*?<\/think>/g, "").trim() || undefined;
+
+			console.log(
+				`[suspicious-ui-detector] #${pkt.id} <${pkt.tagName}> [${hostname}] → ${suspicious ? "SUSPICIOUS" : "SAFE"}` +
+				`\nprompt:\n${prompt}` +
+				`\nresponse:\n${explanation ?? "(empty)"}`
+			);
+
+			const classification: ClassificationResult = {
+				id: pkt.id,
+				category: suspicious ? "suspicious" : "benign",
+				confidence: suspicious ? "medium" : "low",
+				explanation,
+			};
+
+			chrome.tabs.sendMessage(tabId, { type: "classificationResult", result: classification }).catch(() => {});
+
+			if (p) {
+				p.done++;
+				broadcastStatus({ stage: "classifying", total: p.total, done: p.done }, tabId);
+
+				if (p.done >= p.total) {
+					tabProgress.delete(tabId);
+					tabQueues.delete(tabId);
+					broadcastStatus({ stage: "done" }, tabId);
+				}
+			}
+		}
+	} finally {
+		processingQueue = false;
 	}
 }
 
