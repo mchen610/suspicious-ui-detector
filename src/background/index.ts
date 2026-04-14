@@ -1,4 +1,4 @@
-import { classifyPacketsWithInference, getStatusForTab, setModelId, cancelTab } from "./llm";
+import { enqueuePackets, setActiveTab, getStatusForTab, setModelId, cancelTab } from "./llm";
 import { EvidencePacket, BackgroundMessage, unreachable } from "../shared/types";
 import { DEFAULT_MODEL_ID } from "../shared/models";
 
@@ -21,6 +21,12 @@ chrome.runtime.onInstalled.addListener((details) => {
 chrome.runtime.onStartup.addListener(() => {
 	console.log("[suspicious-ui-detector] browser startup detected");
 });
+
+// Track active tab for priority queue
+chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+	if (tabs[0]?.id !== undefined) setActiveTab(tabs[0].id);
+});
+chrome.tabs.onActivated.addListener((info) => setActiveTab(info.tabId));
 
 // Storage helpers
 
@@ -70,18 +76,6 @@ async function getActiveTabId(): Promise<number | undefined> {
 	});
 }
 
-// Classify handler
-
-async function handleClassify({ packets, url }: ClassifyMessage, tabId?: number) {
-	console.log(`[suspicious-ui-detector] received ${packets.length} packets from ${url}`);
-	try {
-		await classifyPacketsWithInference(packets, url, tabId);
-		console.log("[suspicious-ui-detector] classification complete");
-	} catch (err) {
-		console.error("[suspicious-ui-detector] classify error:", err);
-	}
-}
-
 // Central message router
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -106,10 +100,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 		}
 
 		case "classify": {
-
-
-			handleClassify(message as ClassifyMessage, sender.tab?.id).then(sendResponse);
-			return true;
+			const { packets, url } = message as ClassifyMessage;
+			const tabId = sender.tab?.id;
+			if (tabId !== undefined && packets.length > 0) {
+				enqueuePackets(packets, url, tabId);
+			}
+			sendResponse();
+			return false;
 		}
 
 		case "iframeFlag": {
@@ -150,7 +147,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 				return false;
 			}
 
-			sendToTab(tabId, {type: "getDetections"}).then((response) => {
+			chrome.tabs.sendMessage(tabId, {type: "getDetections"}, {frameId: 0}, (response) => {
+				if (chrome.runtime.lastError) {
+					sendResponse({count: 0});
+					return;
+				}
 				sendResponse({count: (response as any)?.count ?? 0});
 			});
 
