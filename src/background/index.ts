@@ -139,7 +139,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 		case "getStatus": {
 			const tabId = message.tabId;
-			sendResponse(tabId !== undefined ? getStatusForTab(tabId) : { stage: "idle" });
+			sendResponse(tabId !== undefined ? getStatusForTab(tabId) : { stage: "done" });
 			return false;
 		}
 
@@ -188,6 +188,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 			const hostname: string = message.hostname;
 			const trusted: boolean = message.trusted;
 
+			if (trusted && message.tabId !== undefined) cancelTab(message.tabId);
+
 			(async () => {
 				const settings = await getSettings();
 				const updated = trusted ? [...new Set([...settings.trustedSites, hostname])]
@@ -197,7 +199,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 				const tabId = message.tabId ?? (await getActiveTabId());
 				if (tabId !== undefined) {
-					if (trusted) cancelTab(tabId);
 					// only re-enable if detection is globally enabled
 					const shouldRun = !trusted && settings.detectionEnabled;
 					await sendToTab(tabId, {type: "detectionToggle", enabled: shouldRun});

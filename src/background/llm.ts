@@ -56,7 +56,6 @@ export async function setModelId(newId: string): Promise<void> {
 }
 
 export type PipelineStatus =
-	| { stage: "idle" }
 	| { stage: "loading"; modelId: string; progress: number }
 	| { stage: "classifying"; total: number; done: number }
 	| { stage: "done" };
@@ -77,7 +76,7 @@ function broadcastStatus(status: PipelineStatus, tabId?: number) {
 }
 
 export function getStatusForTab(tabId: number): PipelineStatus {
-	return tabStatus.get(tabId) ?? { stage: "idle" };
+	return tabStatus.get(tabId) ?? { stage: "done" };
 }
 
 export async function getEngine(): Promise<MLCEngineInterface> {
