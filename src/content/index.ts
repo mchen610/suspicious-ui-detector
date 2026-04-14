@@ -32,6 +32,8 @@ let idOffset = 0;
 
 // maps packet IDs to DOM elements
 let elementMap = new Map<number, HTMLElement>();
+let detectionActive = false;
+let adObserver: MutationObserver | null = null;
 
 // --- Overlay / highlight state ---
 
@@ -179,6 +181,7 @@ function runPipeline(): ExtractionResult {
  * worker. Highlights suspicious elements.
  */
 function handleClassifications(classifications: ClassificationResult[]): void {
+    if (!detectionActive) return;
     for (const result of classifications) {
         const elem = elementMap.get(result.id);
         if (!elem) continue;
@@ -205,6 +208,8 @@ function handleClassifications(classifications: ClassificationResult[]): void {
 // --- Clear all highlights ---
 
 function clearAllOverlays() {
+    detectionActive = false;
+    stopAdObserver();
     for (const [id] of overlayMap) {
         removeOverlay(id);
     }
@@ -213,11 +218,21 @@ function clearAllOverlays() {
 
 // --- Run detection ---
 
+function stopAdObserver() {
+    if (adObserver) {
+        adObserver.disconnect();
+        adObserver = null;
+    }
+}
+
 function observeAdContainers() {
+    stopAdObserver();
+
     const containers = document.querySelectorAll<HTMLElement>(DEFAULT_CONFIG.adContainerSelectors);
     if (containers.length === 0) return;
 
-    const observer = new MutationObserver((mutations) => {
+    adObserver = new MutationObserver((mutations) => {
+        if (!detectionActive) return;
         const newCandidates: HTMLElement[] = [];
 
         for (const mutation of mutations) {
@@ -277,7 +292,7 @@ function observeAdContainers() {
     });
 
     for (const container of containers) {
-        observer.observe(container, { childList: true, subtree: true });
+        adObserver.observe(container, { childList: true, subtree: true });
     }
 
     console.debug(
@@ -286,6 +301,7 @@ function observeAdContainers() {
 }
 
 function runDetection() {
+    detectionActive = true;
     const extractionResult = runPipeline();
 
     console.debug(
