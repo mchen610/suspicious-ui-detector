@@ -59,6 +59,7 @@ export type PipelineStatus =
 	| { stage: "done" };
 
 const tabStatus = new Map<number, PipelineStatus>();
+const tabProgress = new Map<number, { total: number; done: number }>();
 
 function broadcastStatus(status: PipelineStatus, tabId?: number) {
 	if (tabId !== undefined) tabStatus.set(tabId, status);
@@ -162,8 +163,16 @@ export async function classifyPacketsWithInference(packets: EvidencePacket[], ur
 	const hostname = url
 		? (() => { try { return new URL(url).hostname; } catch { return url; } })() : "unknown";
 
-	let done = 0;
-	broadcastStatus({ stage: "classifying", total: packets.length, done: 0 }, tabId);
+	// Accumulate totals across multiple concurrent batches for the same tab
+	const progress = tabId !== undefined ? tabProgress.get(tabId) : undefined;
+	if (progress) {
+		progress.total += packets.length;
+	} else if (tabId !== undefined) {
+		tabProgress.set(tabId, { total: packets.length, done: 0 });
+	}
+
+	const p = tabId !== undefined ? tabProgress.get(tabId)! : { total: packets.length, done: 0 };
+	broadcastStatus({ stage: "classifying", total: p.total, done: p.done }, tabId);
 
 	for (const pkt of packets) {
 		const prompt = buildPrompt(pkt, url);
@@ -177,8 +186,6 @@ export async function classifyPacketsWithInference(packets: EvidencePacket[], ur
 			console.error(`[suspicious-ui-detector] classify error for #${pkt.id}:`, err);
 			raw = String(err);
 		}
-
-		// console.log(`[suspicious-ui-detector] #${pkt.id} <${pkt.tagName}> → ${suspicious ? "SUSPICIOUS" : "SAFE"}\nprompt:\n${prompt}\nresponse:\n${raw.trim()}`);
 
 		const explanation = raw.replace(/<think>[\s\S]*?<\/think>/g, "").trim() || undefined;
 
@@ -200,10 +207,15 @@ export async function classifyPacketsWithInference(packets: EvidencePacket[], ur
 			chrome.tabs.sendMessage(tabId, { type: "classificationResult", result: classification }).catch(() => {});
 		}
 
-		broadcastStatus({ stage: "classifying", total: packets.length, done: ++done }, tabId);
+		p.done++;
+		broadcastStatus({ stage: "classifying", total: p.total, done: p.done }, tabId);
 	}
 
-	broadcastStatus({ stage: "done" }, tabId);
+	// Only broadcast "done" when all packets for this tab are finished
+	if (p.done >= p.total) {
+		if (tabId !== undefined) tabProgress.delete(tabId);
+		broadcastStatus({ stage: "done" }, tabId);
+	}
 }
 
 export const _testing = { buildPrompt, classifyOne, SYSTEM_PROMPT };

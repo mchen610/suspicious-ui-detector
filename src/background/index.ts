@@ -163,10 +163,19 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 			(async () => {
 				await setDetectionEnabled(enabled);
 
-				// tell content script to stop when disabled/run again when enabled
 				const tabId = message.tabId ?? (await getActiveTabId());
 				if (tabId !== undefined) {
-					await sendToTab(tabId, {type: "detectionToggle", enabled});
+					// only re-enable if the site isn't trusted
+					let shouldRun = enabled;
+					if (enabled) {
+						const tab = await chrome.tabs.get(tabId);
+						const hostname = tab.url ? new URL(tab.url).hostname : null;
+						const settings = await getSettings();
+						if (hostname && settings.trustedSites.includes(hostname)) {
+							shouldRun = false;
+						}
+					}
+					await sendToTab(tabId, {type: "detectionToggle", enabled: shouldRun});
 				}
 
 				sendResponse({ok: true});
@@ -186,10 +195,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 				await setTrustedSites(updated);
 
-				// tell content script to stop when trusted/run again when untrusted
 				const tabId = message.tabId ?? (await getActiveTabId());
 				if (tabId !== undefined) {
-					await sendToTab(tabId, {type: "detectionToggle", enabled: !trusted});
+					// only re-enable if detection is globally enabled
+					const shouldRun = !trusted && settings.detectionEnabled;
+					await sendToTab(tabId, {type: "detectionToggle", enabled: shouldRun});
 				}
 
 				sendResponse({ok: true});
