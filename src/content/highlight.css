@@ -27,7 +27,7 @@
     border-radius: 3px;
     white-space: nowrap;
     pointer-events: auto;
-    user-select: none;
+    user-select: text;
     display: inline-flex;
     align-items: center;
 }
@@ -38,6 +38,7 @@
     margin-right: 6px;
     font-size: 13px;
     opacity: 0.8;
+    user-select: none;
 }
 
 .suspicious-ui-detector-badge-x:hover {
