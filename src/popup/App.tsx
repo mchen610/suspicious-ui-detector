@@ -4,7 +4,6 @@ import { MODEL_GROUPS, DEFAULT_MODEL_ID, suggestModelId } from "../shared/models
 import "./index.css";
 
 type PipelineStatus =
-	| { stage: "idle" }
 	| { stage: "loading"; modelId: string; progress: number }
 	| { stage: "classifying"; total: number; done: number }
 	| { stage: "done"; flagged: number };
@@ -71,18 +70,11 @@ function StatusLine({ status }: { status: PipelineStatus }) {
 					Page looks safe
 				</span>
 			);
-		default:
-			return (
-				<span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-400">
-					<span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-pulse" />
-					Scanning...
-				</span>
-			);
 	}
 }
 
 function App() {
-	const [status, setStatus] = useState<PipelineStatus>({ stage: "idle" });
+	const [status, setStatus] = useState<PipelineStatus>({ stage: "done", flagged: 0 });
 	const [detectionEnabled, setDetectionEnabled] = useState(true);
 	const [trustThisSite, setTrustThisSite] = useState(false);
 	const [currentHostname, setCurrentHostname] = useState<string | null>(null);
@@ -146,19 +138,17 @@ function App() {
 			// get current pipeline status for this tab from the background
 			if (tabId !== undefined) {
 				chrome.runtime.sendMessage({ type: "getStatus", tabId: tabId }, (response) => {
-					if (!chrome.runtime.lastError && response && response.stage !== "idle") {
-						setStatus(response);
-					} else if (tabId !== undefined) {
-
-						// ask background to relay detection count query to the content script
+					if (chrome.runtime.lastError) return;
+					if (response.stage === "done") {
 						chrome.runtime.sendMessage({ type: "getDetections", tabId }, (detResponse) => {
 							if (chrome.runtime.lastError) {
 								setStatus({ stage: "done", flagged: 0 });
 								return;
 							}
-
 							setStatus({ stage: "done", flagged: detResponse?.count ?? 0 });
 						});
+					} else {
+						setStatus(response);
 					}
 				});
 			}
@@ -169,8 +159,6 @@ function App() {
 
 	function handleDetectionEnabled(value: boolean) {
 		setDetectionEnabled(value);
-		if (value) setStatus({ stage: "idle" });
-
 		// tell background to set detection status
 		chrome.runtime.sendMessage({
 			type: "setDetectionEnabled",
@@ -187,7 +175,7 @@ function App() {
 
 	function handleTrustThisSite(value: boolean) {
 		setTrustThisSite(value);
-		setStatus(value ? { stage: "done", flagged: 0 } : { stage: "idle" });
+		if (value) setStatus({ stage: "done", flagged: 0 });
 
 		// tell background to set currentHostname trusted site status
 		chrome.runtime.sendMessage({
