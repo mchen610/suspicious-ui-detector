@@ -56,7 +56,7 @@ function StatusLine({ status }: { status: PipelineStatus }) {
 			return (
 				<span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-400">
 					<span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-pulse" />
-					Processing {status.total} element{status.total !== 1 && "s"}...
+					Scanning {status.done} of {status.total} elements…
 				</span>
 			);
 		case "done":
@@ -96,7 +96,17 @@ function App() {
 		let tabId: number | undefined;
 		const listener = (message: { type: string; status: PipelineStatus; tabId?: number }) => {
 			if (message.type === "statusUpdate" && (message.tabId === undefined || message.tabId === tabId)) {
-				setStatus(message.status);
+				if (message.status.stage === "done" && tabId !== undefined) {
+					chrome.runtime.sendMessage({ type: "getDetections", tabId }, (response) => {
+						if (chrome.runtime.lastError) {
+							setStatus({ stage: "done", flagged: 0 });
+							return;
+						}
+						setStatus({ stage: "done", flagged: response?.count ?? 0 });
+					});
+				} else {
+					setStatus(message.status);
+				}
 			}
 		};
 		chrome.runtime.onMessage.addListener(listener);
