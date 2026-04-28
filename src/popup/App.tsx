@@ -1,16 +1,3 @@
-/**
- * Popup UI.
- *
- * Renders the extension's settings panel (detection toggle, trusted-site
- * toggle, model picker, debug toggle) and a live status line driven by
- * 'statusUpdate' broadcasts from the background service worker.
- *
- * The popup never messages the content script directly. Every read and
- * write goes through the background worker per the hub-and-spoke
- * architecture.
- */
-
-
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { MODEL_GROUPS, DEFAULT_MODEL_ID, suggestModelId } from "../shared/models";
@@ -21,10 +8,6 @@ type PipelineStatus =
 	| { stage: "classifying"; total: number; done: number }
 	| { stage: "done"; flagged: number };
 
-/**
- * Probes the WebGPU adapter for its maxBufferSize, used to suggest a model
- * that will fit in available VRAM. Returns 0 if WebGPU is unavailable.
- */
 async function getMaxBufferSizeMB(): Promise<number> {
 	try {
 		const gpu = (navigator as any).gpu;
@@ -37,7 +20,6 @@ async function getMaxBufferSizeMB(): Promise<number> {
 	}
 }
 
-/** Small switch component used for each boolean setting. */
 function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange: (v: boolean) => void }) {
 	return (
 		<label className="flex items-center justify-between cursor-pointer">
@@ -57,7 +39,6 @@ function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange:
 	);
 }
 
-/** Renders the active pipeline stage (loading / scanning / done). */
 function StatusLine({ status }: { status: PipelineStatus }) {
 	switch (status.stage) {
 		case "loading": {
@@ -102,9 +83,6 @@ function App() {
 	const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL_ID);
 	const [debugModeEnabled, setDebugModeEnabled] = useState(false);
 
-	// On mount, subscribe to status updates, fetch settings, fetch current
-	// pipeline status, and (if no model is stored yet) suggest one based on
-	// available WebGPU VRAM.
 	useEffect(() => {
 		const gpuProbe = getMaxBufferSizeMB();
 
@@ -134,7 +112,7 @@ function App() {
 			const hostname = tab?.url ? new URL(tab.url).hostname : null;
 			setCurrentHostname(hostname);
 
-			// fetch detection-enabled and trusted-site settings from the background worker
+			// get detection enabled and trusted site settings from the background
 			chrome.runtime.sendMessage({ type: "getSettings" }, (settings) => {
 				if (chrome.runtime.lastError) {
 					setSettingsLoaded(true);
@@ -159,7 +137,7 @@ function App() {
 				});
 			});
 
-			// fetch current pipeline status for this tab from the background worker
+			// get current pipeline status for this tab from the background
 			if (tabId !== undefined) {
 				chrome.runtime.sendMessage({ type: "getStatus", tabId: tabId }, (response) => {
 					if (chrome.runtime.lastError) return;
@@ -183,21 +161,10 @@ function App() {
 
 	function handleDetectionEnabled(value: boolean) {
 		setDetectionEnabled(value);
+		// tell background to set detection status
 		chrome.runtime.sendMessage({
 			type: "setDetectionEnabled",
 			enabled: value,
-			tabId: activeTabId,
-		});
-	}
-
-	function handleTrustThisSite(value: boolean) {
-		setTrustThisSite(value);
-		if (value) setStatus({ stage: "done", flagged: 0 });
-
-		chrome.runtime.sendMessage({
-			type: "setTrustSite",
-			hostname: currentHostname,
-			trusted: value,
 			tabId: activeTabId,
 		});
 	}
@@ -206,6 +173,19 @@ function App() {
 		setSelectedModel(modelId);
 		setStatus({ stage: "loading", modelId, progress: 0 });
 		chrome.runtime.sendMessage({ type: "setModel", modelId });
+	}
+
+	function handleTrustThisSite(value: boolean) {
+		setTrustThisSite(value);
+		if (value) setStatus({ stage: "done", flagged: 0 });
+
+		// tell background to set currentHostname trusted site status
+		chrome.runtime.sendMessage({
+			type: "setTrustSite",
+			hostname: currentHostname,
+			trusted: value,
+			tabId: activeTabId,
+		});
 	}
 
 	function handleDebugMode(value: boolean) {
@@ -220,7 +200,7 @@ function App() {
 	return (
 		<div className="w-[280px] bg-white font-sans">
 			<div className="px-4 py-3 border-b border-gray-100">
-				<h1 className="text-xs font-bold text-gray-500 tracking-wide uppercase">Deceptive Ad Flagger</h1>
+				<h1 className="text-xs font-bold text-gray-500 tracking-wide uppercase">Suspicious UI Detector</h1>
 			</div>
 
 			<div className="px-4 py-3 border-b border-gray-100">
